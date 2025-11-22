@@ -12,6 +12,7 @@ def get_image_base64(file_path):
             return f"data:image/jpeg;base64,{encoded}"
     return None
 
+# 读取同级目录下的 bliss.jpeg
 local_bliss_url = get_image_base64("bliss.jpeg")
 fallback_url = "https://web.archive.org/web/20230206142820if_/https://upload.wikimedia.org/wikipedia/en/d/d2/Bliss_%28Windows_XP%29.png"
 final_bliss_url = local_bliss_url if local_bliss_url else fallback_url
@@ -67,6 +68,7 @@ html_code = f"""
             box-shadow: inset 0 0 20px rgba(0,0,0,0.5); overflow: hidden;
             border: 2px solid #000; 
         }}
+        /* 噪点层 */
         #meme-canvas::after {{
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAUVBMVEWFhYWDg4N3d3dtbW17e3t1dXV0dHR4eHh2dnZ6enp8fHx5eXl9fX1xcXF/f39wcHBzc3Nvb29TU1NEREQtLS0lJSUgICAfHx8QEBAAAAAA/wAkAAAAPnRSTlMAAQIDBAUGBwgJCgsMDQ4PEBITFBUWFxgZGhscHR4fICEiIyQmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0Zom6gAAAEZSURBVEjHhZKHctwwDANFaaTYRZvb/v9fN0hA4g1cOa3tK9c4FkWRokRKCgE/hJ1I8d/Zt2r58wWza3eF4H92v2m+gU+R8X+w5874D2z9F0j8C53jX+h3/IWH+Bdu+S9c418YFv+FufkXlvErbPErXN9+hU9/hX3/Fa7XW2Q1r9HXeI2u1it0/b5Ctl9B1+9/IXsE7P25QnZfIftv0M1+hWz+C9k/obcI2T2Bt98gO39B71+QnZeo9r9A7xW62+9R+xX2vEDvF+jdY7XfINsH9H4F7X+D7L4h92s0998gO19R+/+g2z/o9gH9+4LevoD+O+j/B/R+h/2+Qp7vUPN3qNl+Q+3W8x37B6jdfL9jV1G+X1H8A4x9d6nQ8oafAAAAAElFTkSuQmCC");
@@ -78,10 +80,9 @@ html_code = f"""
             position: absolute; white-space: nowrap; cursor: grab; font-weight: 900; line-height: 1;
             z-index: 10; opacity: 1;
         }}
-        /* 增加一个慢速变色动画，只对部分文字生效 */
-        @keyframes hueAnim {{
-            0% {{ filter: hue-rotate(0deg); }}
-            100% {{ filter: hue-rotate(360deg); }}
+        @keyframes spinSlow {{
+            0% {{ transform: rotate(0deg); }}
+            100% {{ transform: rotate(360deg); }}
         }}
 
         /* === 控制面板 === */
@@ -112,7 +113,7 @@ html_code = f"""
         <div>
             <div class="panel-label">Text Generator</div>
             <div class="control-row">
-                <input type="text" id="textInput" placeholder="输入文字..." value="Design is my Passion">
+                <input type="text" id="textInput" placeholder="输入文字..." value="Design is My Passion !!!">
                 <button class="retro-btn" style="flex:0.6;" onclick="spawnSentence()">ADD TEXT</button>
                 <button class="retro-btn danger" style="flex:0.4;" onclick="clearCanvas()">🗑️ CLEAR</button>
             </div>
@@ -139,23 +140,27 @@ html_code = f"""
         const fontFamilies = ['"Comic Sans MS"', 'Impact', '"Times New Roman"', 'Arial Black', 'Papyrus', 'Courier New', 'Verdana', '"Brush Script MT"'];
         const blissData = "{final_bliss_url}";
 
-        // === 1. 纯高饱和渐变库 (High Saturation ONLY) ===
-        // 第一个是经典全彩虹，后续是各种高饱和撞色
+        // === 1. 升级版高饱和彩虹库 (宽间距，多角度) ===
         const highSatGradients = [
-            "linear-gradient(180deg, #FF0000, #FF7F00, #FFFF00, #00FF00, #0000FF, #4B0082, #9400D3)", // 0: 经典全彩虹 (首发必中)
-            "linear-gradient(135deg, #FF0099, #493240)", // 赛博粉黑
-            "linear-gradient(90deg, #00F260, #0575E6)",  // 极光绿蓝
-            "linear-gradient(to right, #833ab4, #fd1d1d, #fcb045)", // Instagram 风格高饱和
-            "linear-gradient(to top, #00c6ff, #0072ff)", // 宝马蓝
-            "linear-gradient(45deg, #f12711, #f5af19)", // 火焰红黄
-            "linear-gradient(to bottom, #cc2b5e, #753a88)", // 紫红强对比
-            "linear-gradient(to right, #000000, #0f9b0f)", // 黑客帝国绿
-            "linear-gradient(120deg, #e65c00, #F9D423)", // 橘子汽水
-            "linear-gradient(to right, #DA22FF, #9733EE)", // 霓虹紫
-            "linear-gradient(to bottom, #FF416C, #FF4B2B)"  // 警示红
+            // 经典全彩虹 (垂直，拉开间距)
+            "linear-gradient(180deg, #FF0000 0%, #FF7F00 15%, #FFFF00 30%, #00FF00 50%, #0000FF 70%, #4B0082 85%, #9400D3 100%)",
+            // 经典全彩虹 (斜向 45度)
+            "linear-gradient(45deg, #FF0000, #FFFF00, #0000FF, #FF0000)",
+            // 赛博粉蓝 (斜向 135度，大色块)
+            "linear-gradient(135deg, #FF00CC 0%, #333399 100%)", 
+            // 酸性故障 (横向，高频)
+            "linear-gradient(90deg, #00FF00, #FF00FF, #00FFFF, #FFFF00)",
+            // 警示红黄 (径向)
+            "radial-gradient(circle, #FFFF00 0%, #FF0000 100%)",
+            // 迪斯科 (斜向，多色块)
+            "linear-gradient(120deg, #e4ff00 0%, #ff0055 50%, #00ccff 100%)",
+            // 深邃霓虹
+            "linear-gradient(to bottom right, #2C3E50, #FD746C)",
+            // 极光 (垂直)
+            "linear-gradient(to bottom, #00F260, #0575E6)" 
         ];
 
-        let rainbowClickCount = 0; // 计数器，用于判断是否第一次点击
+        let rainbowClickCount = 0;
 
         function randomColor() {{ return `hsl(${{Math.floor(Math.random() * 360)}}, 100%, 50%)`; }}
 
@@ -178,61 +183,75 @@ html_code = f"""
                 this.element.innerText = text;
                 this.element.style.fontFamily = fontFamilies[Math.floor(Math.random() * fontFamilies.length)];
                 
-                const size = Math.floor(Math.random() * 60) + 40;
+                // === 字号差距拉大 ===
+                // 30px (极小) 到 150px (极大)
+                const size = Math.floor(Math.random() * 120) + 30;
                 this.element.style.fontSize = `${{size}}px`;
                 
-                // === 2. 多样化字体设计 (4种随机风格) ===
-                const styleType = Math.floor(Math.random() * 4); 
+                // === 多样化风格 (参考提供的梗图) ===
+                const styleType = Math.floor(Math.random() * 5); 
+                
+                // 随机基础颜色
+                const color1 = randomColor();
+                const color2 = randomColor();
+                const color3 = randomColor();
 
                 if (styleType === 0) {{
-                    // Style 0: [实色投影风] 纯色 + 黑色描边 + 黑色硬投影
-                    this.element.style.color = randomColor();
+                    // [Style: The Stack/叠叠乐] (参考 "学会了" 图)
+                    // 多层硬阴影叠加，像贴纸
+                    this.element.style.color = "#fff";
                     this.element.style.webkitTextStroke = "2px black";
-                    this.element.style.textShadow = "4px 4px 0px black";
+                    this.element.style.textShadow = `3px 3px 0 ${{color1}}, 6px 6px 0 ${{color2}}`;
+                    this.element.style.fontWeight = "900";
                 }} 
                 else if (styleType === 1) {{
-                    // Style 1: [彩虹渐变风] 文字内部渐变 + 无描边
+                     // [Style: Rainbow Liquid/渐变流体]
                     const angle = Math.floor(Math.random() * 360);
-                    this.element.style.backgroundImage = `linear-gradient(${{angle}}deg, red, orange, yellow, green, blue, violet)`;
+                    this.element.style.backgroundImage = `linear-gradient(${{angle}}deg, ${{color1}}, ${{color2}}, ${{color3}})`;
                     this.element.style.webkitBackgroundClip = 'text';
                     this.element.style.webkitTextFillColor = 'transparent';
-                    // 渐变字一般加点倾斜更好看
-                    this.element.style.fontStyle = "italic";
+                    this.element.style.transform = `skew(${{Math.random()*30-15}}deg)`;
                 }} 
                 else if (styleType === 2) {{
-                    // Style 2: [撞色描边风] 纯色填充 + 粗壮的彩色描边
-                    this.element.style.color = randomColor();
-                    const strokeColor = randomColor();
-                    this.element.style.webkitTextStroke = `3px ${{strokeColor}}`;
-                    // 稍微旋转
-                    this.element.style.transform = `rotate(${{Math.random()*20-10}}deg)`;
+                    // [Style: Heavy Stroke/大描边] (参考 "Design" 红字)
+                    // 极粗描边 + 高对比填充
+                    this.element.style.color = color1;
+                    this.element.style.webkitTextStroke = `4px black`; // 黑描边更复古
+                    this.element.style.paintOrder = "stroke fill"; // 让描边不吃掉字体
+                }} 
+                else if (styleType === 3) {{
+                    // [Style: Glitch/故障风]
+                    this.element.style.color = "#00ff00"; // 典型故障绿
+                    this.element.style.textShadow = `-2px 0 red, 2px 0 blue`;
+                    this.element.style.fontFamily = "Courier New"; // 更有代码感
                 }} 
                 else {{
-                    // Style 3: [轻度变形风] 纯色 + 随机拉伸/压扁
-                    this.element.style.color = randomColor();
-                    // 偶尔加个发光效果
-                    this.element.style.textShadow = `0 0 5px ${{randomColor()}}`;
+                    // [Style: Pure Chaos/纯粹混沌]
+                    // 随机填充 + 随机背景块 + 随机旋转
+                    this.element.style.color = "white";
+                    this.element.style.backgroundColor = color1;
+                    this.element.style.padding = "2px 10px";
+                    this.element.style.transform = `rotate(${{Math.random()*40-20}}deg)`;
                 }}
 
-                // 通用变形逻辑 (叠加在特定风格之上)
-                // 只有非Style2(因为Style2已经定义了旋转)才随机旋转
-                let baseTransform = this.element.style.transform || "";
-                
-                // 随机 Skew (倾斜)
-                const skewX = Math.floor(Math.random() * 30) - 15;
-                // 随机 Scale (拉伸)
-                const scaleX = 0.7 + Math.random() * 0.6; // 0.7 ~ 1.3
-                
-                // 组合变换
-                this.element.style.transform = `${{baseTransform}} skew(${{skewX}}deg) scaleX(${{scaleX}})`;
+                // 通用变换 (叠加)
+                let currentTransform = this.element.style.transform || "";
+                // 随机拉伸 (压扁或拉长)
+                const scaleX = 0.5 + Math.random() * 1.0; 
+                // 随机旋转 (如果上面没转过)
+                if (!currentTransform.includes("rotate")) {{
+                     const rotate = Math.floor(Math.random() * 60) - 30;
+                     currentTransform += ` rotate(${{rotate}}deg)`;
+                }}
+                this.element.style.transform = `${{currentTransform}} scaleX(${{scaleX}})`;
 
                 this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
                 canvas.appendChild(this.element);
 
                 this.x = Math.random() * (canvas.clientWidth - 100);
                 this.y = Math.random() * (canvas.clientHeight - 100);
-                this.vx = (Math.random() - 0.5) * 1.5;
-                this.vy = (Math.random() - 0.5) * 1.5;
+                this.vx = (Math.random() - 0.5) * 2; // 速度稍微快一点点
+                this.vy = (Math.random() - 0.5) * 2;
             }}
             
             update() {{
@@ -240,6 +259,7 @@ html_code = f"""
                 const h = this.element.offsetHeight;
                 const maxW = canvas.clientWidth;
                 const maxH = canvas.clientHeight;
+
                 this.x += this.vx; this.y += this.vy;
 
                 if (this.x <= 0) {{ this.vx = Math.abs(this.vx); this.x = 0; }} 
@@ -262,14 +282,11 @@ html_code = f"""
 
         function clearCanvas() {{ floaters = []; canvas.innerHTML = ''; }}
 
-        // === 3. 高饱和彩虹逻辑 ===
         function setHighSatRainbow() {{
             let gradient;
             if (rainbowClickCount === 0) {{
-                // 第一次点击，强制使用索引 0 (全彩虹)
-                gradient = highSatGradients[0];
+                gradient = highSatGradients[0]; // 第一次点击必出经典
             }} else {{
-                // 之后点击，从列表中随机选 (包含全彩虹)
                 gradient = highSatGradients[Math.floor(Math.random() * highSatGradients.length)];
             }}
             rainbowClickCount++;
@@ -306,7 +323,16 @@ html_code = f"""
         }}
 
         function animate() {{ floaters.forEach(f => f.update()); requestAnimationFrame(animate); }}
-        window.onload = () => {{ setTimeout(spawnSentence, 500); animate(); }};
+        
+        // === 初始化逻辑 ===
+        window.onload = () => {{ 
+            // 1. 默认背景设置为 Bliss
+            setBg('bliss');
+            // 2. 延迟生成文字
+            setTimeout(spawnSentence, 500); 
+            animate(); 
+        }};
+        
         textInput.addEventListener('keypress', (e) => e.key === 'Enter' && spawnSentence());
 
     </script>
