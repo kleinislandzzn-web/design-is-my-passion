@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import base64
 import os
 
-# === 1. Python 后端：读取本地 bliss.jpeg ===
+# === 1. Python 后端 ===
 def get_image_base64(file_path):
     if os.path.exists(file_path):
         with open(file_path, "rb") as f:
@@ -60,7 +60,7 @@ html_code = f"""
             color: #666; font-weight: bold; font-size: 12px; letter-spacing: 2px; text-shadow: -1px -1px 0 #000;
         }}
 
-        /* === 画布 (像素化滤镜) === */
+        /* === 画布 === */
         #meme-canvas {{
             position: relative; width: 700px; max-width: 90vw; aspect-ratio: 4 / 3;
             background-color: #ffffff; border-radius: 40px / 10px;
@@ -68,36 +68,33 @@ html_code = f"""
             border: 2px solid #000; 
             filter: contrast(125%) brightness(105%);
             image-rendering: pixelated;
-            image-rendering: crisp-edges;
         }}
-        /* 噪点层 */
         #meme-canvas::after {{
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAUVBMVEWFhYWDg4N3d3dtbW17e3t1dXV0dHR4eHh2dnZ6enp8fHx5eXl9fX1xcXF/f39wcHBzc3Nvb29TU1NEREQtLS0lJSUgICAfHx8QEBAAAAAA/wAkAAAAPnRSTlMAAQIDBAUGBwgJCgsMDQ4PEBITFBUWFxgZGhscHR4fICEiIyQmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0Zom6gAAAEZSURBVEjHhZKHctwwDANFaaTYRZvb/v9fN0hA4g1cOa3tK9c4FkWRokRKCgE/hJ1I8d/Zt2r58wWza3eF4H92v2m+gU+R8X+w5874D2z9F0j8C53jX+h3/IWH+Bdu+S9c418YFv+FufkXlvErbPErXN9+hU9/hX3/Fa7XW2Q1r9HXeI2u1it0/b5Ctl9B1+9/IXsE7P25QnZfIftv0M1+hWz+C9k/obcI2T2Bt98gO39B71+QnZeo9r9A7xW62+9R+xX2vEDvF+jdY7XfINsH9H4F7X+D7L4h92s0998gO19R+/+g2z/o9gH9+4LevoD+O+j/B/R+h/2+Qp7vUPN3qNl+Q+3W8x37B6jdfL9jV1G+X1H8A4x9d6nQ8oafAAAAAElFTkSuQmCC");
             opacity: 0.25; pointer-events: none; z-index: 5; mix-blend-mode: overlay;
         }}
 
-        /* === 漂浮文字 (核心修改区) === */
+        /* === 漂浮文字 (关键修复) === */
         .floater {{
             position: absolute; 
             white-space: nowrap; 
             cursor: grab; 
             font-weight: 900; 
-            line-height: 1;
+            
+            /* 修复裁切问题：增加内边距，让斜体字和阴影有显示空间 */
+            padding: 20px; 
+            /* 修复裁切问题：增加行高 */
+            line-height: 1.5; 
+            
             z-index: 10; 
             opacity: 1; 
             
-            /* 关键修复 1: 强制把元素变为块级容器，确保背景色能被正确渲染 */
             display: inline-block;
-            
-            /* 关键修复 2: 强制 GPU 加速，防止移动时背景消失 */
             will-change: transform, left, top;
             
-            /* 保持锯齿感 */
             -webkit-font-smoothing: none;
-            -moz-osx-font-smoothing: grayscale;
             text-rendering: geometricPrecision;
-            
             transition: font-size 0.3s, color 0.3s, text-shadow 0.3s;
         }}
 
@@ -107,28 +104,14 @@ html_code = f"""
             padding: 15px; width: 700px; max-width: 90vw; display: flex; flex-direction: column; gap: 15px; box-shadow: 5px 5px 0 rgba(0,0,0,0.3);
         }}
         .control-row {{ display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; align-items: center;}}
-        
         input[type="text"] {{ flex: 2; background: #fff; border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; padding: 8px; font-family: 'Courier New', monospace; font-weight: bold; outline: none; font-size: 18px; }}
-        
         .retro-btn {{ background: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040; padding: 8px 15px; cursor: pointer; font-weight: bold; font-family: 'Courier New', monospace; font-size: 12px; color: black; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; flex:1; white-space: nowrap; height: 36px; box-sizing: border-box; }}
         .retro-btn:active {{ border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; transform: translate(1px, 1px); }}
         .retro-btn.danger {{ color: red; }}
         .retro-btn.action {{ color: blue; }}
-        
         .panel-label {{ font-size: 12px; margin-bottom: 5px; color: #333; text-transform: uppercase; }}
         #file-input {{ position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0;}}
-
-        /* === 底部版权声明 === */
-        .footer-text {{
-            margin-top: 20px;
-            font-family: 'Courier New', Courier, monospace;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 14px;
-            font-weight: bold;
-            text-shadow: 2px 2px 0 #000;
-            letter-spacing: 1px;
-            text-align: center;
-        }}
+        .footer-text {{ margin-top: 20px; font-family: 'Courier New', Courier, monospace; color: rgba(255, 255, 255, 0.6); font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; text-align: center; }}
     </style>
 </head>
 <body>
@@ -184,7 +167,6 @@ html_code = f"""
         ];
 
         let rainbowClickCount = 0;
-
         function randomColor() {{ return `hsl(${{Math.floor(Math.random() * 360)}}, 100%, 50%)`; }}
 
         function segmentText(text) {{
@@ -206,14 +188,13 @@ html_code = f"""
                 this.element.innerText = text;
                 
                 this.applyRandomStyle();
-
                 this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
                 canvas.appendChild(this.element);
 
+                // 增大出生点的安全距离
                 const safeMargin = 100;
                 this.x = safeMargin + Math.random() * (canvas.clientWidth - 2 * safeMargin);
                 this.y = safeMargin + Math.random() * (canvas.clientHeight - 2 * safeMargin);
-                
                 this.vx = (Math.random() - 0.5) * 2;
                 this.vy = (Math.random() - 0.5) * 2;
             }}
@@ -223,17 +204,25 @@ html_code = f"""
                 const size = Math.floor(Math.random() * 120) + 30;
                 this.element.style.fontSize = `${{size}}px`;
 
-                // 重置所有可能影响的样式
-                this.element.style.color = "";
-                this.element.style.webkitTextStroke = "";
-                this.element.style.textShadow = "";
-                this.element.style.backgroundImage = "";
-                this.element.style.backgroundColor = "transparent";
-                this.element.style.webkitBackgroundClip = "";
-                this.element.style.webkitTextFillColor = "";
-                this.element.style.fontStyle = "normal";
-                this.element.style.padding = "0";
-                this.element.style.transform = ""; 
+                // 清除所有可能残留的样式
+                this.element.style.cssText = `
+                    font-family: ${{this.element.style.fontFamily}};
+                    font-size: ${{size}}px;
+                    position: absolute;
+                    white-space: nowrap;
+                    cursor: grab;
+                    z-index: 10;
+                    opacity: 1;
+                    display: inline-block;
+                    will-change: transform, left, top;
+                    -webkit-font-smoothing: none;
+                    text-rendering: geometricPrecision;
+                    padding: 20px;
+                    line-height: 1.5;
+                    transition: font-size 0.3s, color 0.3s, text-shadow 0.3s;
+                    left: ${{this.x}}px;
+                    top: ${{this.y}}px;
+                `;
 
                 const styleType = Math.floor(Math.random() * 6); 
                 const color1 = randomColor();
@@ -242,34 +231,39 @@ html_code = f"""
                 let transformCSS = "";
 
                 if (styleType === 0) {{
-                    // Style 0: 叠叠乐
+                    // [Style 0: 叠叠乐] - 安全
                     this.element.style.color = "#fff";
                     this.element.style.webkitTextStroke = "2px black";
                     this.element.style.textShadow = `4px 4px 0 ${{color1}}, 8px 8px 0 ${{color2}}`;
                     this.element.style.fontWeight = "900";
                 }} 
                 else if (styleType === 1) {{
-                     // Style 1: 渐变流体 (需要 display: inline-block 才能在浮动时显示背景)
-                    const angle = Math.floor(Math.random() * 360);
-                    this.element.style.backgroundImage = `linear-gradient(${{angle}}deg, ${{color1}}, ${{color2}}, ${{randomColor()}})`;
-                    this.element.style.webkitBackgroundClip = 'text';
-                    this.element.style.webkitTextFillColor = 'transparent';
-                    transformCSS += ` skew(${{Math.random()*30-15}}deg)`; 
+                     // [Style 1: 3D Retro / 复古立体] - 替换掉了不稳定的背景裁切
+                     // 使用实色 + 强烈的3D阴影，效果类似但渲染稳定
+                    this.element.style.color = color1;
+                    this.element.style.textShadow = `
+                        1px 1px 0 #000,
+                        2px 2px 0 #000,
+                        3px 3px 0 #000,
+                        4px 4px 0 #000,
+                        5px 5px 0 ${{color2}}
+                    `;
+                    this.element.style.transform = "skew(-10deg)";
                 }} 
                 else if (styleType === 2) {{
-                    // Style 2: 大描边
+                    // [Style 2: 大描边] - 安全
                     this.element.style.color = color1;
                     this.element.style.webkitTextStroke = `4px black`; 
                     this.element.style.paintOrder = "stroke fill"; 
                 }} 
                 else if (styleType === 3) {{
-                    // Style 3: 故障风
+                    // [Style 3: 故障风] - 安全
                     this.element.style.color = "#00ff00"; 
                     this.element.style.textShadow = `-3px 0 red, 3px 0 blue`;
                     this.element.style.fontFamily = '"Courier New", monospace';
                 }} 
                 else if (styleType === 4) {{
-                     // Style 4: 轻度变形
+                     // [Style 4: 轻度变形] - 安全
                      this.element.style.color = color1;
                      const scaleX = 0.6 + Math.random() * 1.2; 
                      const scaleY = 0.6 + Math.random() * 0.8; 
@@ -278,10 +272,13 @@ html_code = f"""
                      if (Math.random()>0.5) this.element.style.webkitTextStroke = "1px black";
                 }}
                 else {{
-                    // Style 5: 色块背景
-                    this.element.style.color = "white";
+                    // [Style 5: 贴纸/标签] - 替换掉了不稳定的色块
+                    // 使用边框 + 背景色，非常稳
+                    this.element.style.color = "black";
                     this.element.style.backgroundColor = color1;
-                    this.element.style.padding = "2px 10px";
+                    this.element.style.border = "3px solid black";
+                    this.element.style.borderRadius = "5px";
+                    this.element.style.fontWeight = "bold";
                     transformCSS += ` rotate(${{Math.random()*40-20}}deg)`;
                 }}
 
@@ -302,23 +299,11 @@ html_code = f"""
 
                 this.x += this.vx; this.y += this.vy;
 
-                if (this.x <= safeBuffer) {{ 
-                    this.vx = Math.abs(this.vx); 
-                    this.x = safeBuffer; 
-                }} 
-                else if (this.x + w >= maxW - safeBuffer) {{ 
-                    this.vx = -Math.abs(this.vx); 
-                    this.x = maxW - w - safeBuffer; 
-                }}
+                if (this.x <= safeBuffer) {{ this.vx = Math.abs(this.vx); this.x = safeBuffer; }} 
+                else if (this.x + w >= maxW - safeBuffer) {{ this.vx = -Math.abs(this.vx); this.x = maxW - w - safeBuffer; }}
 
-                if (this.y <= safeBuffer) {{ 
-                    this.vy = Math.abs(this.vy); 
-                    this.y = safeBuffer; 
-                }} 
-                else if (this.y + h >= maxH - safeBuffer) {{ 
-                    this.vy = -Math.abs(this.vy); 
-                    this.y = maxH - h - safeBuffer; 
-                }}
+                if (this.y <= safeBuffer) {{ this.vy = Math.abs(this.vy); this.y = safeBuffer; }} 
+                else if (this.y + h >= maxH - safeBuffer) {{ this.vy = -Math.abs(this.vy); this.y = maxH - h - safeBuffer; }}
 
                 this.element.style.left = `${{this.x}}px`; 
                 this.element.style.top = `${{this.y}}px`;
