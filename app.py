@@ -42,8 +42,10 @@ html_code = f"""
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
+        /* === 全局样式 === */
         body {{
             margin: 0; padding: 20px; background-color: #2d1b4e;
             background-image: radial-gradient(#4a2c7a 1px, transparent 1px);
@@ -51,30 +53,35 @@ html_code = f"""
             display: flex; flex-direction: column; align-items: center; min-height: 95vh; box-sizing: border-box;
         }}
 
+        /* === 电视机外框 === */
         .tv-set {{
             background-color: #2a2a2a; padding: 20px 20px 40px 20px; border-radius: 30px;
             box-shadow: inset 0 0 10px #000, 0 0 0 5px #111, 0 20px 50px rgba(0,0,0,0.6);
             border-bottom: 10px solid #1a1a1a; margin-bottom: 30px; position: relative;
+            width: 100%; max-width: 700px; /* 限制最大宽度 */
+            box-sizing: border-box;
         }}
         .tv-logo {{
             position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
             color: #666; font-weight: bold; font-size: 12px; letter-spacing: 2px; text-shadow: -1px -1px 0 #000;
         }}
 
+        /* === 画布 === */
         #meme-canvas {{
-            position: relative; width: 700px; max-width: 90vw; aspect-ratio: 4 / 3;
+            position: relative; width: 100%; aspect-ratio: 4 / 3;
             background-color: #ffffff; border-radius: 40px / 10px;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.5); overflow: hidden;
             border: 2px solid #000; 
-            filter: contrast(110%) brightness(105%);
+            filter: contrast(125%) brightness(105%);
             image-rendering: pixelated;
         }}
         #meme-canvas::after {{
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36zwjjgzhhYWGMYAEYB8RmROaABADeOQ8CXl/xfgAAAABJRU5ErkJggg==");
-            opacity: 0.1; pointer-events: none; z-index: 5; mix-blend-mode: overlay; background-size: 4px 4px;
+            opacity: 0.25; pointer-events: none; z-index: 5; mix-blend-mode: overlay;
         }}
 
+        /* === 漂浮文字 === */
         .floater {{
             position: absolute; 
             white-space: nowrap; 
@@ -89,19 +96,62 @@ html_code = f"""
             transition: font-size 0.3s, color 0.3s, text-shadow 0.3s, background 0.3s;
         }}
 
+        /* === 控制面板 === */
         #controls {{
             background-color: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040;
-            padding: 15px; width: 700px; max-width: 90vw; display: flex; flex-direction: column; gap: 15px; box-shadow: 5px 5px 0 rgba(0,0,0,0.3);
+            padding: 15px; width: 100%; max-width: 700px; display: flex; flex-direction: column; gap: 15px; box-shadow: 5px 5px 0 rgba(0,0,0,0.3);
+            box-sizing: border-box;
         }}
         .control-row {{ display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; align-items: center;}}
+        
         input[type="text"] {{ flex: 2; background: #fff; border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; padding: 8px; font-family: 'Courier New', monospace; font-weight: bold; outline: none; font-size: 18px; }}
+        
         .retro-btn {{ background: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040; padding: 8px 15px; cursor: pointer; font-weight: bold; font-family: 'Courier New', monospace; font-size: 12px; color: black; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; flex:1; white-space: nowrap; height: 36px; box-sizing: border-box; }}
         .retro-btn:active {{ border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; transform: translate(1px, 1px); }}
         .retro-btn.danger {{ color: red; }}
         .retro-btn.action {{ color: blue; }}
+        
         .panel-label {{ font-size: 12px; margin-bottom: 5px; color: #333; text-transform: uppercase; }}
         #file-input {{ position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0;}}
         .footer-text {{ margin-top: 20px; font-family: 'Courier New', Courier, monospace; color: rgba(255, 255, 255, 0.6); font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; text-align: center; }}
+
+        /* === 📱 手机端自适应 (关键修改) === */
+        @media (max-width: 768px) {{
+            body {{ padding: 10px; }}
+            .tv-set {{ padding: 10px; border-radius: 15px; margin-bottom: 15px; }}
+            #meme-canvas {{ border-radius: 20px / 5px; }}
+            
+            #controls {{ padding: 10px; gap: 10px; }}
+            
+            /* 强制改为 Grid 布局，不再挤在一行 */
+            .control-row {{
+                display: grid !important;
+                grid-template-columns: 1fr 1fr 1fr; /* 默认3列 */
+                gap: 8px;
+            }}
+            
+            /* 输入框占满整行 */
+            #textInput {{
+                grid-column: span 3; 
+                width: 100%;
+                margin-bottom: 5px;
+                font-size: 16px; /* 防止iOS缩放 */
+            }}
+            
+            /* 按钮样式调整 */
+            .retro-btn {{
+                flex: none !important; /* 覆盖内联样式 */
+                width: auto !important;
+                font-size: 11px; /* 稍微调小字号 */
+                padding: 5px 2px;
+                height: 44px; /* 增加高度，方便点击 */
+                white-space: normal; /* 允许文字换行 */
+                line-height: 1.1;
+                text-align: center;
+            }}
+            
+            /* 第二行的按钮只有5个，3列布局会自动排成 3+2 */
+        }}
     </style>
 </head>
 <body>
@@ -172,7 +222,6 @@ html_code = f"""
         }}
 
         class Floater {{
-            // === 修改：构造函数增加 index 和 total 参数 ===
             constructor(text, index, total) {{
                 this.element = document.createElement('div');
                 this.element.className = 'floater';
@@ -182,36 +231,22 @@ html_code = f"""
                 this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
                 canvas.appendChild(this.element);
 
-                // === 核心修改：基于网格的顺序排列 (Grid Layout) ===
                 const safeMargin = 60; 
-                const availableWidth = canvas.clientWidth - 100 - safeMargin * 2; // 减去预估宽度
+                const availableWidth = canvas.clientWidth - 100 - safeMargin * 2;
                 const availableHeight = canvas.clientHeight - 100 - safeMargin * 2;
-
-                // 计算最佳行列数 (趋向于方形网格)
                 const cols = Math.ceil(Math.sqrt(total));
                 const rows = Math.ceil(total / cols);
-
-                // 计算当前单词在网格中的坐标
                 const col = index % cols;
                 const row = Math.floor(index / cols);
-
-                // 计算每个网格单元的大小
                 const cellWidth = availableWidth / cols;
                 const cellHeight = availableHeight / rows;
-
-                // 确定基准位置 (每个格子的左上角 + Margin)
                 let baseX = safeMargin + col * cellWidth;
                 let baseY = safeMargin + row * cellHeight;
-
-                // 在各自的格子内添加随机扰动 (Jitter)
-                // 这样既保证了顺序，又不会太死板
                 const jitterX = Math.random() * (cellWidth * 0.6);
                 const jitterY = Math.random() * (cellHeight * 0.6);
 
                 this.x = baseX + jitterX;
                 this.y = baseY + jitterY;
-
-                // 慢速移动
                 this.vx = (Math.random() - 0.5) * 0.5; 
                 this.vy = (Math.random() - 0.5) * 0.5;
             }}
@@ -229,35 +264,45 @@ html_code = f"""
                 this.element.style.webkitBackgroundClip = "";
                 this.element.style.webkitTextFillColor = "";
                 this.element.style.fontStyle = "normal";
+                this.element.style.padding = "25px"; 
+                this.element.style.border = "none";
                 this.element.style.transform = ""; 
 
-                const styleType = Math.floor(Math.random() * 6); 
+                const styleType = Math.floor(Math.random() * 10); 
                 const color1 = randomColor();
                 const color2 = randomColor();
+                const color3 = randomColor();
                 let transformCSS = "";
 
                 if (styleType === 0) {{
+                    // Style 0: Stack
                     this.element.style.color = "#fff";
                     this.element.style.webkitTextStroke = "2px black";
                     this.element.style.textShadow = `4px 4px 0 ${{color1}}, 8px 8px 0 ${{color2}}`;
                     this.element.style.fontWeight = "900";
                 }} 
                 else if (styleType === 1) {{
-                    this.element.style.color = color1;
-                    this.element.style.textShadow = `2px 2px 0 #000, 4px 4px 0 #000, 6px 6px 0 ${{color2}}`;
-                    transformCSS += " skew(-10deg)";
+                     // Style 1: Liquid
+                    const angle = Math.floor(Math.random() * 360);
+                    this.element.style.backgroundImage = `linear-gradient(${{angle}}deg, ${{color1}}, ${{color2}}, ${{color3}})`;
+                    this.element.style.webkitBackgroundClip = 'text';
+                    this.element.style.webkitTextFillColor = 'transparent';
+                    transformCSS += ` skew(${{Math.random()*30-15}}deg)`; 
                 }} 
                 else if (styleType === 2) {{
+                    // Style 2: Stroke
                     this.element.style.color = color1;
                     this.element.style.webkitTextStroke = `4px black`; 
                     this.element.style.paintOrder = "stroke fill"; 
                 }} 
                 else if (styleType === 3) {{
+                    // Style 3: Glitch
                     this.element.style.color = "#00ff00"; 
                     this.element.style.textShadow = `-3px 0 red, 3px 0 blue`;
                     this.element.style.fontFamily = '"Courier New", monospace';
                 }} 
                 else if (styleType === 4) {{
+                     // Style 4: Elastic
                      this.element.style.color = color1;
                      const scaleX = 0.6 + Math.random() * 1.2; 
                      const scaleY = 0.6 + Math.random() * 0.8; 
@@ -265,18 +310,41 @@ html_code = f"""
                      transformCSS += ` scale(${{scaleX}}, ${{scaleY}}) skew(${{skew}}deg)`;
                      if (Math.random()>0.5) this.element.style.webkitTextStroke = "1px black";
                 }}
-                else {{
+                else if (styleType === 5) {{
+                    // Style 5: Stretch
                     this.element.style.color = color1;
                     let scaleX, scaleY;
                     if (Math.random() > 0.5) {{
-                        scaleX = 1.5 + Math.random() * 1.5; 
-                        scaleY = 0.6 + Math.random() * 0.2; 
+                        scaleX = 1.5 + Math.random() * 1.5; scaleY = 0.6 + Math.random() * 0.2; 
                     }} else {{
-                        scaleX = 0.4 + Math.random() * 0.3; 
-                        scaleY = 1.5 + Math.random() * 1.5; 
+                        scaleX = 0.4 + Math.random() * 0.3; scaleY = 1.5 + Math.random() * 1.5; 
                     }}
                     transformCSS += ` scale(${{scaleX.toFixed(2)}}, ${{scaleY.toFixed(2)}})`;
                     if (Math.random() > 0.5) this.element.style.webkitTextStroke = "1px black";
+                }}
+                else if (styleType === 6) {{
+                    // Style 6: Neon
+                    this.element.style.color = "white";
+                    this.element.style.textShadow = `0 0 5px ${{color1}}, 0 0 10px ${{color1}}, 0 0 20px ${{color1}}`;
+                }}
+                else if (styleType === 7) {{
+                    // Style 7: Ghost
+                    this.element.style.color = "rgba(255,255,255,0.8)";
+                    this.element.style.textShadow = `5px 5px 0px ${{color1}}, 10px 10px 0px rgba(0,0,0,0.2)`;
+                    this.element.style.fontStyle = "italic";
+                }}
+                else if (styleType === 8) {{
+                    // Style 8: Highlighter
+                    this.element.style.color = "black";
+                    this.element.style.backgroundColor = color1;
+                    this.element.style.padding = "5px 15px"; 
+                    transformCSS += ` rotate(${{Math.random()*10-5}}deg)`;
+                }}
+                else {{
+                    // Style 9: Hollow
+                    this.element.style.color = "transparent";
+                    this.element.style.webkitTextStroke = `2px ${{color1}}`;
+                    this.element.style.filter = `drop-shadow(3px 3px 0px ${{color2}})`;
                 }}
 
                 if (!transformCSS.includes("rotate")) {{
@@ -302,7 +370,6 @@ html_code = f"""
                 if (this.y <= safeBuffer) {{ this.vy = Math.abs(this.vy); this.y = safeBuffer; }} 
                 else if (this.y + h >= maxH - safeBuffer) {{ this.vy = -Math.abs(this.vy); this.y = maxH - h - safeBuffer; }}
 
-                // 柔性排斥 (保留，以防随机扰动导致重叠)
                 for (const other of floaters) {{
                     if (other === this) continue;
                     const cx1 = this.x + w/2; const cy1 = this.y + h/2;
@@ -333,7 +400,6 @@ html_code = f"""
             const text = textInput.value;
             const words = segmentText(text);
             const total = words.length;
-            // 修改：传入 index 和 total
             words.forEach((w, i) => floaters.push(new Floater(w, i, total)));
             textInput.value = '';
         }}
