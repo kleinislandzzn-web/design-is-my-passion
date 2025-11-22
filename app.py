@@ -243,8 +243,8 @@ html_code = """
             this.element.addEventListener('click', (e) => { e.stopPropagation(); this.element.remove(); });
             canvas.appendChild(this.element);
 
-            this.resolveOverlap();   // 生成时先尽量不撞车
-            this.ensureInBounds();   // 再 clamp 进画布
+            this.resolveOverlap();
+            this.ensureInBounds();
         }
 
         ensureInBounds() {
@@ -315,55 +315,6 @@ html_code = """
 
             this.element.style.left = `${this.x}px`;
             this.element.style.top = `${this.y}px`;
-        }
-
-        // 移动时的“互相躲开一点”逻辑
-        avoidOverlapWhileMoving() {
-            const w = this.element.offsetWidth || 0;
-            const h = this.element.offsetHeight || 0;
-            if (!w || !h) return;
-
-            const cx = this.x + w / 2;
-            const cy = this.y + h / 2;
-
-            const pushStrength = 0.8;   // 每帧轻轻推一点就好
-            const maxPushes = 6;        // 限制次数，避免抖成一团
-            let pushes = 0;
-
-            for (const other of floaters) {
-                if (other === this || !other.element || !other.element.isConnected) continue;
-
-                const ow = other.element.offsetWidth || 0;
-                const oh = other.element.offsetHeight || 0;
-                if (!ow || !oh) continue;
-
-                const ocx = other.x + ow / 2;
-                const ocy = other.y + oh / 2;
-
-                // 先判定矩形是否重叠
-                const overlapX = Math.abs(cx - ocx) < (w + ow) / 2;
-                const overlapY = Math.abs(cy - ocy) < (h + oh) / 2;
-
-                if (overlapX && overlapY) {
-                    // 两个中心的方向向量
-                    let dx = cx - ocx;
-                    let dy = cy - ocy;
-                    if (dx === 0 && dy === 0) {
-                        dx = (Math.random() - 0.5) || 0.1;
-                        dy = (Math.random() - 0.5) || 0.1;
-                    }
-                    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                    const nx = dx / dist;
-                    const ny = dy / dist;
-
-                    // 往反方向推一点
-                    this.x += nx * pushStrength;
-                    this.y += ny * pushStrength;
-
-                    pushes++;
-                    if (pushes >= maxPushes) break;
-                }
-            }
         }
 
         applyRandomStyle() {
@@ -447,7 +398,7 @@ html_code = """
             else if (styleType === 3) {
                 this.element.style.color = "#00ff00";
                 this.element.style.textShadow = "-3px 0 red, 3px 0 blue";
-                this.element.style.fontFamily = '"Courier New', 'monospace";
+                this.element.style.fontFamily = '"Courier New", monospace';
             }
             else if (styleType === 4) {
                 this.element.style.color = color1;
@@ -471,7 +422,7 @@ html_code = """
                 if (Math.random() > 0.5) this.element.style.webkitTextStroke = "1px #000000";
             }
             else if (styleType === 6) {
-                // 光晕减弱版霓虹
+                // 霓虹发光（光晕减弱版）
                 this.element.style.color = color1;
                 this.element.style.textShadow =
                     `0 0 3px ${color1},
@@ -518,17 +469,14 @@ html_code = """
             const w = this.element.offsetWidth || 0;
             const h = this.element.offsetHeight || 0;
 
-            // 位置更新
             this.x += this.vx;
             this.y += this.vy;
 
-            // 轻微随机扰动方向
             if (Math.random() < 0.02) {
                 this.vx += (Math.random() - 0.5) * 0.1;
                 this.vy += (Math.random() - 0.5) * 0.1;
             }
 
-            // 控制速度区间
             let speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
             if (speed < MIN_SPEED) {
                 const angle = Math.random() * Math.PI * 2;
@@ -541,7 +489,6 @@ html_code = """
                 this.vy *= scale;
             }
 
-            // 撞边反弹 + clamp，保证不出画布
             if (w > 0 && h > 0) {
                 const maxX = Math.max(margin, maxW - w - margin);
                 const maxY = Math.max(margin, maxH - h - margin);
@@ -555,11 +502,6 @@ html_code = """
                     this.y = Math.min(Math.max(this.y, margin), maxY);
                 }
             }
-
-            // 和其他字块做轻微排斥，减少交叠遮挡
-            this.avoidOverlapWhileMoving();
-            // 再次 clamp 一遍，防止排斥后把自己推出画布
-            this.ensureInBounds();
 
             this.element.style.left = `${this.x}px`; 
             this.element.style.top = `${this.y}px`;
