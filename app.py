@@ -200,7 +200,7 @@ html_code = """
     const canvas = document.getElementById('meme-canvas');
     const textInput = document.getElementById('textInput');
     const blissData = "__BLISS__";
-    const BASE_SPEED = 0.35;       // 单帧位移很小
+    const BASE_SPEED = 0.35;
     const MIN_SPEED = 0.05;
     const MAX_SPEED = 0.6;
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
@@ -243,8 +243,8 @@ html_code = """
             this.element.addEventListener('click', (e) => { e.stopPropagation(); this.element.remove(); });
             canvas.appendChild(this.element);
 
-            this.resolveOverlap();     // 避免一生成就重叠
-            this.ensureInBounds();     // 强制保证在画布内
+            this.resolveOverlap();
+            this.ensureInBounds();
         }
 
         ensureInBounds() {
@@ -422,12 +422,12 @@ html_code = """
                 if (Math.random() > 0.5) this.element.style.webkitTextStroke = "1px #000000";
             }
             else if (styleType === 6) {
+                // 霓虹发光（光晕减弱版）
                 this.element.style.color = color1;
                 this.element.style.textShadow =
-                    `0 0 6px ${color1},
-                     0 0 14px ${color1},
-                     0 0 24px ${color2},
-                     0 0 40px ${color2}`;
+                    `0 0 3px ${color1},
+                     0 0 6px ${color1},
+                     0 0 10px ${color2}`;
             }
             else if (styleType === 7) {
                 this.element.style.color = "#ffffff";
@@ -472,13 +472,11 @@ html_code = """
             this.x += this.vx;
             this.y += this.vy;
 
-            // 轻微随机调整方向，避免太机械
             if (Math.random() < 0.02) {
                 this.vx += (Math.random() - 0.5) * 0.1;
                 this.vy += (Math.random() - 0.5) * 0.1;
             }
 
-            // 控制速度区间
             let speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
             if (speed < MIN_SPEED) {
                 const angle = Math.random() * Math.PI * 2;
@@ -491,7 +489,6 @@ html_code = """
                 this.vy *= scale;
             }
 
-            // 撞到边缘就反弹 + clamp，确保不出画布
             if (w > 0 && h > 0) {
                 const maxX = Math.max(margin, maxW - w - margin);
                 const maxY = Math.max(margin, maxH - h - margin);
