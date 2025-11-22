@@ -81,12 +81,14 @@ html_code = f"""
             opacity: 0.25; pointer-events: none; z-index: 5; mix-blend-mode: overlay;
         }}
 
-        /* === 漂浮文字 (关键修复：防频闪) === */
+        /* === 漂浮文字 === */
         .floater {{
             position: absolute; 
             white-space: nowrap; 
             cursor: grab; 
             font-weight: 900; 
+            
+            /* 这里的 padding 和 line-height 也会在 JS 里根据屏幕大小动态调整 */
             padding: 25px; 
             line-height: 1.2;
             
@@ -94,10 +96,7 @@ html_code = f"""
             z-index: 10; 
             opacity: 1; 
             
-            /* 1. 移除 left/top 的 will-change，减少移动端布局抖动 */
-            will-change: transform; 
-            
-            /* 2. 移动端抗频闪核心 Hack */
+            will-change: transform;
             -webkit-backface-visibility: hidden;
             backface-visibility: hidden;
             -webkit-perspective: 1000;
@@ -126,7 +125,7 @@ html_code = f"""
         #file-input {{ position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0;}}
         .footer-text {{ margin-top: 20px; font-family: 'Courier New', Courier, monospace; color: rgba(255, 255, 255, 0.6); font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; text-align: center; }}
 
-        /* === 📱 手机端自适应 === */
+        /* === 手机端布局调整 === */
         @media (max-width: 768px) {{
             body {{ padding: 10px; }}
             .tv-set {{ padding: 10px; border-radius: 15px; margin-bottom: 15px; }}
@@ -233,9 +232,15 @@ html_code = f"""
                 this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
                 canvas.appendChild(this.element);
 
-                const safeMargin = 60; 
-                const availableWidth = canvas.clientWidth - 100 - safeMargin * 2;
-                const availableHeight = canvas.clientHeight - 100 - safeMargin * 2;
+                // === 关键修改：动态计算安全边距和网格大小 ===
+                // 根据屏幕宽度决定缩放比例 (Scale Factor)
+                const baseWidth = 700; // 电脑端基准宽度
+                const scale = Math.max(0.4, Math.min(1, canvas.clientWidth / baseWidth)); // 限制在 0.4x 到 1.0x 之间
+
+                const safeMargin = 60 * scale; 
+                const availableWidth = canvas.clientWidth - (100 * scale) - safeMargin * 2;
+                const availableHeight = canvas.clientHeight - (100 * scale) - safeMargin * 2;
+                
                 const cols = Math.ceil(Math.sqrt(total));
                 const rows = Math.ceil(total / cols);
                 const col = index % cols;
@@ -255,8 +260,23 @@ html_code = f"""
 
             applyRandomStyle() {{
                 this.element.style.fontFamily = fontFamilies[Math.floor(Math.random() * fontFamilies.length)];
-                const size = Math.floor(Math.random() * 120) + 30;
+                
+                // === 关键修改：字号自适应 ===
+                // 获取当前画布宽度，计算缩放系数
+                const baseWidth = 700; 
+                // 手机端缩放系数 (例如手机宽350，系数就是0.5)
+                const scale = Math.max(0.4, Math.min(1, canvas.clientWidth / baseWidth));
+                
+                // 基础字号范围 (电脑端)
+                const baseMin = 30;
+                const baseMax = 120;
+                
+                // 应用缩放
+                const size = Math.floor(Math.random() * (baseMax * scale)) + (baseMin * scale);
                 this.element.style.fontSize = `${{size}}px`;
+                
+                // Padding 也需要缩放，否则手机上padding太大
+                this.element.style.padding = `${{25 * scale}}px`;
 
                 this.element.style.color = "";
                 this.element.style.webkitTextStroke = "";
@@ -266,7 +286,6 @@ html_code = f"""
                 this.element.style.webkitBackgroundClip = "";
                 this.element.style.webkitTextFillColor = "";
                 this.element.style.fontStyle = "normal";
-                this.element.style.padding = "25px"; 
                 this.element.style.border = "none";
                 this.element.style.transform = ""; 
 
@@ -277,14 +296,12 @@ html_code = f"""
                 let transformCSS = "";
 
                 if (styleType === 0) {{
-                    // Style 0: Stack
                     this.element.style.color = "#fff";
                     this.element.style.webkitTextStroke = "2px black";
                     this.element.style.textShadow = `4px 4px 0 ${{color1}}, 8px 8px 0 ${{color2}}`;
                     this.element.style.fontWeight = "900";
                 }} 
                 else if (styleType === 1) {{
-                     // Style 1: Liquid
                     const angle = Math.floor(Math.random() * 360);
                     this.element.style.backgroundImage = `linear-gradient(${{angle}}deg, ${{color1}}, ${{color2}}, ${{color3}})`;
                     this.element.style.webkitBackgroundClip = 'text';
@@ -292,19 +309,16 @@ html_code = f"""
                     transformCSS += ` skew(${{Math.random()*30-15}}deg)`; 
                 }} 
                 else if (styleType === 2) {{
-                    // Style 2: Stroke
                     this.element.style.color = color1;
                     this.element.style.webkitTextStroke = `4px black`; 
                     this.element.style.paintOrder = "stroke fill"; 
                 }} 
                 else if (styleType === 3) {{
-                    // Style 3: Glitch
                     this.element.style.color = "#00ff00"; 
                     this.element.style.textShadow = `-3px 0 red, 3px 0 blue`;
                     this.element.style.fontFamily = '"Courier New", monospace';
                 }} 
                 else if (styleType === 4) {{
-                     // Style 4: Elastic
                      this.element.style.color = color1;
                      const scaleX = 0.6 + Math.random() * 1.2; 
                      const scaleY = 0.6 + Math.random() * 0.8; 
@@ -313,7 +327,6 @@ html_code = f"""
                      if (Math.random()>0.5) this.element.style.webkitTextStroke = "1px black";
                 }}
                 else if (styleType === 5) {{
-                    // Style 5: Stretch
                     this.element.style.color = color1;
                     let scaleX, scaleY;
                     if (Math.random() > 0.5) {{
@@ -325,25 +338,21 @@ html_code = f"""
                     if (Math.random() > 0.5) this.element.style.webkitTextStroke = "1px black";
                 }}
                 else if (styleType === 6) {{
-                    // Style 6: Neon
                     this.element.style.color = "white";
                     this.element.style.textShadow = `0 0 5px ${{color1}}, 0 0 10px ${{color1}}, 0 0 20px ${{color1}}`;
                 }}
                 else if (styleType === 7) {{
-                    // Style 7: Ghost
                     this.element.style.color = "rgba(255,255,255,0.8)";
                     this.element.style.textShadow = `5px 5px 0px ${{color1}}, 10px 10px 0px rgba(0,0,0,0.2)`;
                     this.element.style.fontStyle = "italic";
                 }}
                 else if (styleType === 8) {{
-                    // Style 8: Highlighter
                     this.element.style.color = "black";
                     this.element.style.backgroundColor = color1;
-                    this.element.style.padding = "5px 15px"; 
+                    this.element.style.padding = `${{10 * scale}}px ${{20 * scale}}px`; // Padding 也要响应式
                     transformCSS += ` rotate(${{Math.random()*10-5}}deg)`;
                 }}
                 else {{
-                    // Style 9: Hollow
                     this.element.style.color = "transparent";
                     this.element.style.webkitTextStroke = `2px ${{color1}}`;
                     this.element.style.filter = `drop-shadow(3px 3px 0px ${{color2}})`;
@@ -354,7 +363,7 @@ html_code = f"""
                      transformCSS += ` rotate(${{rotate}}deg)`;
                 }}
                 
-                // 3. 关键修改：强制增加 translateZ(0) 以触发 3D 加速，解决手机端频闪
+                // 强制 3D 变换，防频闪
                 this.element.style.transform = transformCSS + " translateZ(0)";
             }}
             
