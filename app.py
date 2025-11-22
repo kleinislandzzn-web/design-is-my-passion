@@ -14,19 +14,18 @@ def get_image_base64(file_path):
     return None
 
 # 读取同级目录下的 bliss.jpeg
-# 如果你的文件名是 bliss.jpg (少一个e)，请在这里修改文件名
 local_bliss_url = get_image_base64("bliss.jpeg")
 
-# 备用链接 (如果本地文件没读取到)
+# 备用链接
 fallback_url = "https://web.archive.org/web/20230206142820if_/https://upload.wikimedia.org/wikipedia/en/d/d2/Bliss_%28Windows_XP%29.png"
 
-# 最终使用的链接
+# 最终使用的 Bliss 链接
 final_bliss_url = local_bliss_url if local_bliss_url else fallback_url
 
 
 # === 2. 页面基础设置 ===
 st.set_page_config(
-    page_title="Passion Meme Final",
+    page_title="What is design?",
     page_icon="📺",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -74,7 +73,8 @@ html_code = f"""
             position: relative; width: 700px; max-width: 90vw; aspect-ratio: 4 / 3;
             background-color: #ffffff; border-radius: 40px / 10px;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.5); overflow: hidden;
-            border: 2px solid #000; transition: background 0.5s ease;
+            border: 2px solid #000; 
+            /* 修改：删除了 transition 属性，背景切换瞬间完成，没有滑入动画 */
         }}
         /* 噪点纹理 */
         #meme-canvas::after {{
@@ -100,6 +100,8 @@ html_code = f"""
             padding: 15px; width: 700px; max-width: 90vw; display: flex; flex-direction: column; gap: 15px; box-shadow: 5px 5px 0 rgba(0,0,0,0.3);
         }}
         .control-row {{ display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; align-items: center;}}
+        
+        /* 修改：设置默认文案 */
         input[type="text"] {{ flex: 2; background: #fff; border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; padding: 8px; font-family: 'Courier New', monospace; font-weight: bold; outline: none; font-size: 18px; }}
         
         .retro-btn {{ background: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040; padding: 8px 15px; cursor: pointer; font-weight: bold; font-family: 'Courier New', monospace; font-size: 12px; color: black; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; flex:1; white-space: nowrap; height: 36px; box-sizing: border-box; }}
@@ -121,7 +123,7 @@ html_code = f"""
         <div>
             <div class="panel-label">Text Generator</div>
             <div class="control-row">
-                <input type="text" id="text-input" placeholder="输入文字..." value="我终于学会了设计!">
+                <input type="text" id="textInput" placeholder="输入文字..." value="Design is my Passion">
                 <button class="retro-btn" style="flex:0.6;" onclick="spawnSentence()">ADD TEXT</button>
                 <button class="retro-btn danger" style="flex:0.4;" onclick="clearCanvas()">🗑️ CLEAR</button>
             </div>
@@ -143,14 +145,12 @@ html_code = f"""
 
     <script>
         const canvas = document.getElementById('meme-canvas');
-        const textInput = document.getElementById('text-input');
+        const textInput = document.getElementById('textInput');
         let floaters = [];
         const fontFamilies = ['"Comic Sans MS"', 'Impact', '"Times New Roman"', 'Arial Black', 'Papyrus', 'Courier New', 'Verdana', '"Brush Script MT"'];
         
-        // 注入 Bliss 图片数据 (Python 处理)
         const blissData = "{final_bliss_url}";
 
-        // 多彩渐变库
         const rainbowGradients = [
             "linear-gradient(180deg, #FF0000, #FF7F00, #FFFF00, #00FF00, #0000FF, #4B0082, #9400D3)",
             "linear-gradient(45deg, #ff9a9e, #fad0c4, #fad0c4, #a18cd1, #fbc2eb)",
@@ -167,7 +167,6 @@ html_code = f"""
 
         function randomColor() {{ return `hsl(${{Math.floor(Math.random() * 360)}}, 100%, 50%)`; }}
 
-        // 智能分词 (Intl.Segmenter)
         function segmentText(text) {{
             text = text.trim();
             if (!text) return [];
@@ -227,11 +226,38 @@ html_code = f"""
                 this.vx = (Math.random() - 0.5) * 1.5;
                 this.vy = (Math.random() - 0.5) * 1.5;
             }}
+            
+            // === 修改：严格的边界碰撞检测 ===
             update() {{
-                this.x += this.vx; this.y += this.vy;
-                if (this.x <= 0 || this.x >= canvas.clientWidth - this.element.offsetWidth) this.vx *= -1;
-                if (this.y <= 0 || this.y >= canvas.clientHeight - this.element.offsetHeight) this.vy *= -1;
-                this.element.style.left = `${{this.x}}px`; this.element.style.top = `${{this.y}}px`;
+                const w = this.element.offsetWidth;
+                const h = this.element.offsetHeight;
+                const maxW = canvas.clientWidth;
+                const maxH = canvas.clientHeight;
+
+                // 移动
+                this.x += this.vx; 
+                this.y += this.vy;
+
+                // X轴碰撞：不仅反弹，还修正位置，防止出界
+                if (this.x <= 0) {{
+                    this.vx = Math.abs(this.vx); // 强制向右
+                    this.x = 0; // 强制拉回
+                }} else if (this.x + w >= maxW) {{
+                    this.vx = -Math.abs(this.vx); // 强制向左
+                    this.x = maxW - w; // 强制拉回
+                }}
+
+                // Y轴碰撞
+                if (this.y <= 0) {{
+                    this.vy = Math.abs(this.vy); // 强制向下
+                    this.y = 0;
+                }} else if (this.y + h >= maxH) {{
+                    this.vy = -Math.abs(this.vy); // 强制向上
+                    this.y = maxH - h;
+                }}
+
+                this.element.style.left = `${{this.x}}px`; 
+                this.element.style.top = `${{this.y}}px`;
             }}
         }}
 
@@ -242,10 +268,9 @@ html_code = f"""
             textInput.value = '';
         }}
 
-        // 新增：清空画布函数
         function clearCanvas() {{
-            floaters = []; // 清空数组
-            canvas.innerHTML = ''; // 清空 DOM
+            floaters = []; 
+            canvas.innerHTML = ''; 
         }}
 
         function setRealRainbow() {{
@@ -258,7 +283,6 @@ html_code = f"""
             if (type === 'white') canvas.style.background = '#ffffff';
             else if (type === 'win98') canvas.style.background = '#008080';
             else if (type === 'bliss') {{
-                // 使用 Base64 数据
                 canvas.style.background = `url('${{blissData}}') center/cover no-repeat`;
             }}
         }}
@@ -284,7 +308,10 @@ html_code = f"""
         }}
 
         function animate() {{ floaters.forEach(f => f.update()); requestAnimationFrame(animate); }}
+        
+        // 修改：初始化时使用 input 的值生成
         window.onload = () => {{ setTimeout(spawnSentence, 500); animate(); }};
+        
         textInput.addEventListener('keypress', (e) => e.key === 'Enter' && spawnSentence());
 
     </script>
