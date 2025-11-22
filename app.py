@@ -200,8 +200,9 @@ html_code = """
     const canvas = document.getElementById('meme-canvas');
     const textInput = document.getElementById('textInput');
     const blissData = "__BLISS__";
-    const BASE_SPEED = 0.4;      // 局部轻微浮动
-    const MAX_OFFSET = 25;       // 离锚点最大偏移
+    const BASE_SPEED = 0.35;       // 单帧位移很小
+    const MIN_SPEED = 0.05;
+    const MAX_SPEED = 0.6;
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
     let floaters = [];
 
@@ -235,9 +236,6 @@ html_code = """
             this.x = safeMargin + Math.random() * Math.max(10, (maxW - 2 * safeMargin));
             this.y = safeMargin + Math.random() * Math.max(10, (maxH - 2 * safeMargin));
 
-            this.baseX = this.x;
-            this.baseY = this.y;
-
             this.vx = (Math.random() - 0.5) * BASE_SPEED;
             this.vy = (Math.random() - 0.5) * BASE_SPEED;
 
@@ -245,18 +243,17 @@ html_code = """
             this.element.addEventListener('click', (e) => { e.stopPropagation(); this.element.remove(); });
             canvas.appendChild(this.element);
 
-            this.resolveOverlap();     // 先避免和已有文字重叠
-            this.ensureInBounds(true); // 再强制放进画布，并重新设锚点
+            this.resolveOverlap();     // 避免一生成就重叠
+            this.ensureInBounds();     // 强制保证在画布内
         }
 
-        ensureInBounds(resetBase = false) {
+        ensureInBounds() {
             const maxW = canvas.clientWidth || 700;
             const maxH = canvas.clientHeight || 500;
             const margin = 10;
 
             const w = this.element.offsetWidth || 0;
             const h = this.element.offsetHeight || 0;
-
             if (!w || !h) return;
 
             const maxX = Math.max(margin, maxW - w - margin);
@@ -264,11 +261,6 @@ html_code = """
 
             this.x = Math.min(Math.max(this.x, margin), maxX);
             this.y = Math.min(Math.max(this.y, margin), maxY);
-
-            if (resetBase) {
-                this.baseX = this.x;
-                this.baseY = this.y;
-            }
 
             this.element.style.left = `${this.x}px`;
             this.element.style.top = `${this.y}px`;
@@ -471,27 +463,48 @@ html_code = """
         }
             
         update() {
+            const maxW = canvas.clientWidth || 700;
+            const maxH = canvas.clientHeight || 500;
+            const margin = 10;
+            const w = this.element.offsetWidth || 0;
+            const h = this.element.offsetHeight || 0;
+
             this.x += this.vx;
             this.y += this.vy;
 
-            const dx = this.x - this.baseX;
-            const dy = this.y - this.baseY;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist > MAX_OFFSET) {
-                const factor = MAX_OFFSET / (dist || 1);
-                this.x = this.baseX + dx * factor;
-                this.y = this.baseY + dy * factor;
-                this.vx = -this.vx;
-                this.vy = -this.vy;
-            }
-
-            if (Math.random() < 0.01) {
+            // 轻微随机调整方向，避免太机械
+            if (Math.random() < 0.02) {
                 this.vx += (Math.random() - 0.5) * 0.1;
                 this.vy += (Math.random() - 0.5) * 0.1;
             }
 
-            this.ensureInBounds(false);
+            // 控制速度区间
+            let speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+            if (speed < MIN_SPEED) {
+                const angle = Math.random() * Math.PI * 2;
+                this.vx = Math.cos(angle) * BASE_SPEED;
+                this.vy = Math.sin(angle) * BASE_SPEED;
+                speed = BASE_SPEED;
+            } else if (speed > MAX_SPEED) {
+                const scale = MAX_SPEED / speed;
+                this.vx *= scale;
+                this.vy *= scale;
+            }
+
+            // 撞到边缘就反弹 + clamp，确保不出画布
+            if (w > 0 && h > 0) {
+                const maxX = Math.max(margin, maxW - w - margin);
+                const maxY = Math.max(margin, maxH - h - margin);
+
+                if (this.x <= margin || this.x >= maxX) {
+                    this.vx = -this.vx;
+                    this.x = Math.min(Math.max(this.x, margin), maxX);
+                }
+                if (this.y <= margin || this.y >= maxY) {
+                    this.vy = -this.vy;
+                    this.y = Math.min(Math.max(this.y, margin), maxY);
+                }
+            }
 
             this.element.style.left = `${this.x}px`; 
             this.element.style.top = `${this.y}px`;
@@ -502,10 +515,8 @@ html_code = """
         const text = textInput.value.trim();
         if (!text) return;
         const words = text.includes(' ') ? text.split(/\\s+/) : text.split('');
-        const created = [];
         words.forEach(w => {
             const f = new Floater(w);
-            created.push(f);
             floaters.push(f);
         });
         textInput.value = '';
