@@ -60,38 +60,30 @@ html_code = f"""
             color: #666; font-weight: bold; font-size: 12px; letter-spacing: 2px; text-shadow: -1px -1px 0 #000;
         }}
 
-        /* === 画布 (增加了滤镜以模拟毛刺感) === */
+        /* === 画布 (像素化滤镜) === */
         #meme-canvas {{
             position: relative; width: 700px; max-width: 90vw; aspect-ratio: 4 / 3;
             background-color: #ffffff; border-radius: 40px / 10px;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.5); overflow: hidden;
             border: 2px solid #000; 
-            
-            /* 核心修改：增加对比度，让模糊的边缘变硬，产生锐利/毛刺感 */
             filter: contrast(125%) brightness(105%);
-            
-            /* 强制像素化渲染 */
             image-rendering: pixelated;
             image-rendering: crisp-edges;
         }}
-        
-        /* 噪点层 (加重了一点点不透明度) */
+        /* 噪点层 */
         #meme-canvas::after {{
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAUVBMVEWFhYWDg4N3d3dtbW17e3t1dXV0dHR4eHh2dnZ6enp8fHx5eXl9fX1xcXF/f39wcHBzc3Nvb29TU1NEREQtLS0lJSUgICAfHx8QEBAAAAAA/wAkAAAAPnRSTlMAAQIDBAUGBwgJCgsMDQ4PEBITFBUWFxgZGhscHR4fICEiIyQmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0Zom6gAAAEZSURBVEjHhZKHctwwDANFaaTYRZvb/v9fN0hA4g1cOa3tK9c4FkWRokRKCgE/hJ1I8d/Zt2r58wWza3eF4H92v2m+gU+R8X+w5874D2z9F0j8C53jX+h3/IWH+Bdu+S9c418YFv+FufkXlvErbPErXN9+hU9/hX3/Fa7XW2Q1r9HXeI2u1it0/b5Ctl9B1+9/IXsE7P25QnZfIftv0M1+hWz+C9k/obcI2T2Bt98gO39B71+QnZeo9r9A7xW62+9R+xX2vEDvF+jdY7XfINsH9H4F7X+D7L4h92s0998gO19R+/+g2z/o9gH9+4LevoD+O+j/B/R+h/2+Qp7vUPN3qNl+Q+3W8x37B6jdfL9jV1G+X1H8A4x9d6nQ8oafAAAAAElFTkSuQmCC");
             opacity: 0.25; pointer-events: none; z-index: 5; mix-blend-mode: overlay;
         }}
 
-        /* === 漂浮文字 (去抗锯齿) === */
+        /* === 漂浮文字 === */
         .floater {{
             position: absolute; white-space: nowrap; cursor: grab; font-weight: 900; line-height: 1;
             z-index: 10; opacity: 1; 
-            
-            /* 核心修改：关闭字体平滑，制造锯齿感 */
             -webkit-font-smoothing: none;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: geometricPrecision;
-            
             transition: font-size 0.3s, color 0.3s, text-shadow 0.3s;
         }}
 
@@ -111,6 +103,18 @@ html_code = f"""
         
         .panel-label {{ font-size: 12px; margin-bottom: 5px; color: #333; text-transform: uppercase; }}
         #file-input {{ position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0;}}
+
+        /* === 底部版权声明 (新增) === */
+        .footer-text {{
+            margin-top: 20px;
+            font-family: 'Courier New', Courier, monospace;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000;
+            letter-spacing: 1px;
+            text-align: center;
+        }}
     </style>
 </head>
 <body>
@@ -144,6 +148,8 @@ html_code = f"""
             <button class="retro-btn" style="width: 100%; font-size: 16px;" onclick="exportMeme()">💾 EXPORT MEME</button>
         </div>
     </div>
+
+    <div class="footer-text">© 2025 Leki's Arc Inc.</div>
 
     <script>
         const canvas = document.getElementById('meme-canvas');
@@ -190,7 +196,6 @@ html_code = f"""
                 this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
                 canvas.appendChild(this.element);
 
-                // 初始化位置：强制在中心区域，防止出生即撞墙
                 const safeMargin = 100;
                 this.x = safeMargin + Math.random() * (canvas.clientWidth - 2 * safeMargin);
                 this.y = safeMargin + Math.random() * (canvas.clientHeight - 2 * safeMargin);
@@ -265,36 +270,30 @@ html_code = f"""
                 this.element.style.transform = transformCSS;
             }}
             
-            // === 修正后的物理引擎 (解决裁切/消失问题) ===
             update() {{
                 const w = this.element.offsetWidth;
                 const h = this.element.offsetHeight;
                 const maxW = canvas.clientWidth;
                 const maxH = canvas.clientHeight;
-
-                // 安全边距：设置大一点 (50px)，因为旋转后的文字实际宽度比 offsetWidth 大
-                // 这样能保证文字在碰到物理边缘之前就反弹，不会被裁切
                 const safeBuffer = 50; 
 
                 this.x += this.vx; this.y += this.vy;
 
-                // X轴反弹
                 if (this.x <= safeBuffer) {{ 
-                    this.vx = Math.abs(this.vx); // 向右
+                    this.vx = Math.abs(this.vx); 
                     this.x = safeBuffer; 
                 }} 
                 else if (this.x + w >= maxW - safeBuffer) {{ 
-                    this.vx = -Math.abs(this.vx); // 向左
+                    this.vx = -Math.abs(this.vx); 
                     this.x = maxW - w - safeBuffer; 
                 }}
 
-                // Y轴反弹
                 if (this.y <= safeBuffer) {{ 
-                    this.vy = Math.abs(this.vy); // 向下
+                    this.vy = Math.abs(this.vy); 
                     this.y = safeBuffer; 
                 }} 
                 else if (this.y + h >= maxH - safeBuffer) {{ 
-                    this.vy = -Math.abs(this.vy); // 向上
+                    this.vy = -Math.abs(this.vy); 
                     this.y = maxH - h - safeBuffer; 
                 }}
 
@@ -350,8 +349,6 @@ html_code = f"""
             const originalShadow = canvas.style.boxShadow;
             const originalBorder = canvas.style.border;
             canvas.style.borderRadius = '0'; canvas.style.boxShadow = 'none'; canvas.style.border = 'none';
-            // 导出时移除滤镜，或者保留(如果html2canvas支持)
-            // 这里保持 scale: 2 以获得高清图
             html2canvas(canvas, {{ scale: 2 }}).then(blob => {{
                 const link = document.createElement('a'); link.download = 'passion-meme.png'; link.href = blob.toDataURL('image/png'); link.click();
                 canvas.style.borderRadius = originalRadius; canvas.style.boxShadow = originalShadow; canvas.style.border = originalBorder;
