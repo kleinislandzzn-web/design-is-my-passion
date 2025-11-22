@@ -34,7 +34,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # === 3. 核心 HTML/JS 代码 ===
-html_code = f"""
+html_code = """
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -42,41 +42,41 @@ html_code = f"""
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         /* === 全局样式 === */
-        body {{
+        body {
             margin: 0; padding: 20px; background-color: #2d1b4e;
             background-image: radial-gradient(#4a2c7a 1px, transparent 1px);
             background-size: 20px 20px; font-family: 'Courier New', Courier, monospace;
             display: flex; flex-direction: column; align-items: center; min-height: 95vh; box-sizing: border-box;
-        }}
+        }
 
         /* === 电视机外框 === */
-        .tv-set {{
+        .tv-set {
             background-color: #2a2a2a; padding: 20px 20px 40px 20px; border-radius: 30px;
             box-shadow: inset 0 0 10px #000, 0 0 0 5px #111, 0 20px 50px rgba(0,0,0,0.6);
             border-bottom: 10px solid #1a1a1a; margin-bottom: 30px; position: relative;
-        }}
-        .tv-logo {{
+        }
+        .tv-logo {
             position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
             color: #666; font-weight: bold; font-size: 12px; letter-spacing: 2px; text-shadow: -1px -1px 0 #000;
-        }}
+        }
 
         /* === 画布 === */
-        #meme-canvas {{
+        #meme-canvas {
             position: relative; width: 700px; max-width: 90vw; aspect-ratio: 4 / 3;
             background-color: #ffffff; border-radius: 40px / 10px;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.5); overflow: hidden;
             border: 2px solid #000; 
             filter: contrast(125%) brightness(105%);
             image-rendering: pixelated;
-        }}
-        #meme-canvas::after {{
+        }
+        #meme-canvas::after {
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAUVBMVEWFhYWDg4N3d3dtbW17e3t1dXV0dHR4eHh2dnZ6enp8fHx5eXl9fX1xcXF/f39wcHBzc3Nvb29TU1NEREQtLS0lJSUgICAfHx8QEBAAAAAA/wAkAAAAPnRSTlMAAQIDBAUGBwgJCgsMDQ4PEBITFBUWFxgZGhscHR4fICEiIyQmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0Zom6gAAAEZSURBVEjHhZKHctwwDANFaaTYRZvb/v9fN0hA4g1cOa3tK9c4FkWRokRKCgE/hJ1I8d/Zt2r58wWza3eF4H92v2m+gU+R8X+w5874D2z9F0j8C53jX+h3/IWH+Bdu+S9c418YFv+FufkXlvErbPErXN9+hU9/hX3/Fa7XW2Q1r9HXeI2u1it0/b5Ctl9B1+9/IXsE7P25QnZfIftv0M1+hWz+C9k/obcI2T2Bt98gO39B71+QnZeo9r9A7xW62+9R+xX2vEDvF+jdY7XfINsH9H4F7X+D7L4h92s0998gO19R+/+g2z/o9gH9+4LevoD+O+j/B/R+h/2+Qp7vUPN3qNl+Q+3W8x37B6jdfL9jV1G+X1H8A4x9d6nQ8oafAAAAAElFTkSuQmCC");
             opacity: 0.25; pointer-events: none; z-index: 5; mix-blend-mode: overlay;
-        }}
+        }
 
         /* === 漂浮文字 === */
-        .floater {{
+        .floater {
             position: absolute; 
             white-space: nowrap; 
             cursor: grab; 
@@ -90,72 +90,72 @@ html_code = f"""
             -webkit-font-smoothing: none;
             text-rendering: geometricPrecision;
             transition: font-size 0.3s, color 0.3s, text-shadow 0.3s;
-        }}
+        }
 
         /* === 控制面板 === */
-        #controls {{
+        #controls {
             background-color: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040;
             padding: 15px; width: 700px; max-width: 90vw; display: flex; flex-direction: column; gap: 15px; box-shadow: 5px 5px 0 rgba(0,0,0,0.3);
-        }}
-        .control-row {{ display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; align-items: center;}}
-        input[type="text"] {{ flex: 2; background: #fff; border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; padding: 8px; font-family: 'Courier New', monospace; font-weight: bold; outline: none; font-size: 18px; }}
-        .retro-btn {{ background: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040; padding: 8px 15px; cursor: pointer; font-weight: bold; font-family: 'Courier New', monospace; font-size: 12px; color: black; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; flex:1; white-space: nowrap; height: 36px; box-sizing: border-box; }}
-        .retro-btn:active {{ border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; transform: translate(1px, 1px); }}
-        .retro-btn.danger {{ color: red; }}
-        .retro-btn.action {{ color: blue; }}
-        #file-input {{ position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0;}}
+        }
+        .control-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; align-items: center;}
+        input[type="text"] { flex: 2; background: #fff; border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; padding: 8px; font-family: 'Courier New', monospace; font-weight: bold; outline: none; font-size: 18px; }
+        .retro-btn { background: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040; padding: 8px 15px; cursor: pointer; font-weight: bold; font-family: 'Courier New', monospace; font-size: 12px; color: black; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; flex:1; white-space: nowrap; height: 36px; box-sizing: border-box; }
+        .retro-btn:active { border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; transform: translate(1px, 1px); }
+        .retro-btn.danger { color: red; }
+        .retro-btn.action { color: blue; }
+        #file-input { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0;}
 
-        .footer-text {{ margin-top: 20px; font-family: 'Courier New', Courier, monospace; color: rgba(255, 255, 255, 0.6); font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; text-align: center; }}
+        .footer-text { margin-top: 20px; font-family: 'Courier New', Courier, monospace; color: rgba(255, 255, 255, 0.6); font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; text-align: center; }
 
         /* === 移动端适配 === */
-        @media (max-width: 768px) {{
-            body {{
+        @media (max-width: 768px) {
+            body {
                 padding: 10px;
-            }}
+            }
 
-            .tv-set {{
+            .tv-set {
                 width: 100%;
                 padding: 10px 10px 30px 10px;
-            }}
+            }
 
-            #meme-canvas {{
+            #meme-canvas {
                 width: 100%;
                 max-width: 100%;
                 border-radius: 24px / 8px;
-            }}
+            }
 
-            #controls {{
+            #controls {
                 width: 100%;
                 max-width: 100%;
                 padding: 10px;
                 gap: 10px;
-            }}
+            }
 
-            .control-row {{
+            .control-row {
                 flex-direction: column;
                 align-items: stretch;
                 gap: 8px;
-            }}
+            }
 
-            input[type="text"] {{
+            input[type="text"] {
                 font-size: 14px;
                 padding: 6px 8px;
-            }}
+            }
 
-            .retro-btn {{
+            .retro-btn {
                 font-size: 12px;
                 height: auto;
                 white-space: normal;
                 padding: 8px 10px;
-            }}
+            }
 
             /* 移动端降低文字特效以防闪屏 */
-            .floater {{
+            .floater {
                 -webkit-font-smoothing: antialiased;
                 text-rendering: optimizeLegibility;
                 will-change: left, top;
-            }}
-        }}
+            }
+        }
     </style>
 </head>
 <body>
@@ -193,7 +193,7 @@ html_code = f"""
 <script>
     const canvas = document.getElementById('meme-canvas');
     const textInput = document.getElementById('textInput');
-    const blissData = "{final_bliss_url}";
+    const blissData = "__BLISS__";
     const BASE_SPEED = 0.8;
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
     let floaters = [];
@@ -211,7 +211,9 @@ html_code = f"""
         "linear-gradient(to bottom, #00F260, #0575E6)" 
     ];
 
-    function randomColor() { return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`; }
+    function randomColor() { 
+        return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`; 
+    }
 
     class Floater {
         constructor(text) {
@@ -420,5 +422,8 @@ html_code = f"""
 </body>
 </html>
 """
+
+# 把占位符替换成真实的 Bliss URL
+html_code = html_code.replace("__BLISS__", final_bliss_url)
 
 components.html(html_code, height=1000, scrolling=True)
