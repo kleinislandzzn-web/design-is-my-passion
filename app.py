@@ -106,6 +106,56 @@ html_code = f"""
         .panel-label {{ font-size: 12px; margin-bottom: 5px; color: #333; text-transform: uppercase; }}
         #file-input {{ position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0;}}
         .footer-text {{ margin-top: 20px; font-family: 'Courier New', Courier, monospace; color: rgba(255, 255, 255, 0.6); font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; text-align: center; }}
+
+        /* === 移动端适配 === */
+        @media (max-width: 768px) {{
+            body {{
+                padding: 10px;
+            }}
+
+            .tv-set {{
+                width: 100%;
+                padding: 10px 10px 30px 10px;
+            }}
+
+            #meme-canvas {{
+                width: 100%;
+                max-width: 100%;
+                border-radius: 24px / 8px;
+            }}
+
+            #controls {{
+                width: 100%;
+                max-width: 100%;
+                padding: 10px;
+                gap: 10px;
+            }}
+
+            .control-row {{
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }}
+
+            input[type="text"] {{
+                font-size: 14px;
+                padding: 6px 8px;
+            }}
+
+            .retro-btn {{
+                font-size: 12px;
+                height: auto;
+                white-space: normal; /* 允许按钮文字换行 */
+                padding: 8px 10px;
+            }}
+
+            /* 移动端降低漂浮字的渲染复杂度，减少闪屏 */
+            .floater {{
+                -webkit-font-smoothing: antialiased;
+                text-rendering: optimizeLegibility;
+                will-change: left, top;
+            }}
+        }}
     </style>
 </head>
 <body>
@@ -148,6 +198,7 @@ html_code = f"""
         let floaters = [];
         const fontFamilies = ['"Comic Sans MS"', 'Impact', '"Times New Roman"', 'Arial Black', 'Papyrus', 'Courier New', 'Verdana', '"Brush Script MT"'];
         const blissData = "{final_bliss_url}";
+        const BASE_SPEED = 0.4;  // 控制整体移动速度
 
         const highSatGradients = [
             "linear-gradient(180deg, #FF0000 0%, #FF7F00 15%, #FFFF00 30%, #00FF00 50%, #0000FF 70%, #4B0082 85%, #9400D3 100%)",
@@ -166,7 +217,7 @@ html_code = f"""
         function segmentText(text) {{
             text = text.trim();
             if (!text) return [];
-            if (text.includes(' ')) return text.split(/\s+/).filter(w => w.length > 0);
+            if (text.includes(' ')) return text.split(/\\s+/).filter(w => w.length > 0);
             if (window.Intl && Intl.Segmenter) {{
                 try {{
                     const segmenter = new Intl.Segmenter('zh-CN', {{ granularity: 'word' }});
@@ -180,16 +231,20 @@ html_code = f"""
                 this.element = document.createElement('div');
                 this.element.className = 'floater';
                 this.element.innerText = text;
-                
-                this.applyRandomStyle();
-                this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
-                canvas.appendChild(this.element);
 
                 const safeMargin = 100;
                 this.x = safeMargin + Math.random() * (canvas.clientWidth - 2 * safeMargin);
                 this.y = safeMargin + Math.random() * (canvas.clientHeight - 2 * safeMargin);
-                this.vx = (Math.random() - 0.5) * 2;
-                this.vy = (Math.random() - 0.5) * 2;
+
+                this.vx = (Math.random() - 0.5) * BASE_SPEED;
+                this.vy = (Math.random() - 0.5) * BASE_SPEED;
+
+                this.applyRandomStyle();
+                this.element.addEventListener('click', (e) => {{ 
+                    e.stopPropagation(); 
+                    this.element.remove(); 
+                }});
+                canvas.appendChild(this.element);
             }}
 
             applyRandomStyle() {{
@@ -230,7 +285,7 @@ html_code = f"""
                     this.element.style.fontWeight = "900";
                 }} 
                 else if (styleType === 1) {{
-                     // Style 1: 3D Retro
+                    // Style 1: 3D Retro
                     this.element.style.color = color1;
                     this.element.style.textShadow = `1px 1px 0 #000, 2px 2px 0 #000, 3px 3px 0 #000, 4px 4px 0 #000, 5px 5px 0 ${{color2}}`;
                     transformCSS += " skew(-10deg)";
@@ -248,13 +303,13 @@ html_code = f"""
                     this.element.style.fontFamily = '"Courier New", monospace';
                 }} 
                 else if (styleType === 4) {{
-                     // Style 4: 轻度变形
-                     this.element.style.color = color1;
-                     const scaleX = 0.6 + Math.random() * 1.2; 
-                     const scaleY = 0.6 + Math.random() * 0.8; 
-                     const skew = Math.random() * 40 - 20;     
-                     transformCSS += ` scale(${{scaleX}}, ${{scaleY}}) skew(${{skew}}deg)`;
-                     if (Math.random()>0.5) this.element.style.webkitTextStroke = "1px black";
+                    // Style 4: 轻度变形
+                    this.element.style.color = color1;
+                    const scaleX = 0.6 + Math.random() * 1.2; 
+                    const scaleY = 0.6 + Math.random() * 0.8; 
+                    const skew = Math.random() * 40 - 20;     
+                    transformCSS += ` scale(${{scaleX}}, ${{scaleY}}) skew(${{skew}}deg)`;
+                    if (Math.random()>0.5) this.element.style.webkitTextStroke = "1px black";
                 }}
                 else {{
                     // Style 5: 极限拉伸
@@ -272,8 +327,8 @@ html_code = f"""
                 }}
 
                 if (!transformCSS.includes("rotate")) {{
-                     const rotate = Math.floor(Math.random() * 60) - 30;
-                     transformCSS += ` rotate(${{rotate}}deg)`;
+                    const rotate = Math.floor(Math.random() * 60) - 30;
+                    transformCSS += ` rotate(${{rotate}}deg)`;
                 }}
                 
                 this.element.style.transform = transformCSS;
@@ -286,7 +341,8 @@ html_code = f"""
                 const maxH = canvas.clientHeight;
                 const safeBuffer = 50; 
 
-                this.x += this.vx; this.y += this.vy;
+                this.x += this.vx; 
+                this.y += this.vy;
 
                 if (this.x <= safeBuffer) {{ this.vx = Math.abs(this.vx); this.x = safeBuffer; }} 
                 else if (this.x + w >= maxW - safeBuffer) {{ this.vx = -Math.abs(this.vx); this.x = maxW - w - safeBuffer; }}
@@ -310,7 +366,10 @@ html_code = f"""
             floaters.forEach(f => f.applyRandomStyle());
         }}
 
-        function clearCanvas() {{ floaters = []; canvas.innerHTML = ''; }}
+        function clearCanvas() {{ 
+            floaters = []; 
+            canvas.innerHTML = ''; 
+        }}
 
         function setHighSatRainbow() {{
             let gradient;
@@ -339,20 +398,31 @@ html_code = f"""
                 reader.onload = (evt) => canvas.style.background = `url(${{evt.target.result}}) center/cover no-repeat`;
                 reader.readAsDataURL(file);
             }}
+            e.target.value = ''; // 允许连续选择同一张图
         }});
 
         function exportMeme() {{
             const originalRadius = canvas.style.borderRadius;
             const originalShadow = canvas.style.boxShadow;
             const originalBorder = canvas.style.border;
-            canvas.style.borderRadius = '0'; canvas.style.boxShadow = 'none'; canvas.style.border = 'none';
-            html2canvas(canvas, {{ scale: 2 }}).then(blob => {{
-                const link = document.createElement('a'); link.download = 'passion-meme.png'; link.href = blob.toDataURL('image/png'); link.click();
-                canvas.style.borderRadius = originalRadius; canvas.style.boxShadow = originalShadow; canvas.style.border = originalBorder;
+            canvas.style.borderRadius = '0'; 
+            canvas.style.boxShadow = 'none'; 
+            canvas.style.border = 'none';
+            html2canvas(canvas, {{ scale: 2 }}).then(capturedCanvas => {{
+                const link = document.createElement('a'); 
+                link.download = 'passion-meme.png'; 
+                link.href = capturedCanvas.toDataURL('image/png'); 
+                link.click();
+                canvas.style.borderRadius = originalRadius; 
+                canvas.style.boxShadow = originalShadow; 
+                canvas.style.border = originalBorder;
             }});
         }}
 
-        function animate() {{ floaters.forEach(f => f.update()); requestAnimationFrame(animate); }}
+        function animate() {{ 
+            floaters.forEach(f => f.update()); 
+            requestAnimationFrame(animate); 
+        }}
         
         window.onload = () => {{ 
             setBg('bliss');
