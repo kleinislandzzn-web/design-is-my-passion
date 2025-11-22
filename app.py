@@ -36,7 +36,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# === 3. 核心代码 ===
+# === 3. 核心 HTML/JS 代码 ===
 html_code = f"""
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -58,7 +58,7 @@ html_code = f"""
             background-color: #2a2a2a; padding: 20px 20px 40px 20px; border-radius: 30px;
             box-shadow: inset 0 0 10px #000, 0 0 0 5px #111, 0 20px 50px rgba(0,0,0,0.6);
             border-bottom: 10px solid #1a1a1a; margin-bottom: 30px; position: relative;
-            width: 100%; max-width: 700px; /* 限制最大宽度 */
+            width: 100%; max-width: 700px;
             box-sizing: border-box;
         }}
         .tv-logo {{
@@ -81,7 +81,7 @@ html_code = f"""
             opacity: 0.25; pointer-events: none; z-index: 5; mix-blend-mode: overlay;
         }}
 
-        /* === 漂浮文字 === */
+        /* === 漂浮文字 (关键修复：防频闪) === */
         .floater {{
             position: absolute; 
             white-space: nowrap; 
@@ -89,9 +89,20 @@ html_code = f"""
             font-weight: 900; 
             padding: 25px; 
             line-height: 1.2;
+            
             display: inline-block;
-            will-change: transform, left, top;
-            z-index: 10; opacity: 1; 
+            z-index: 10; 
+            opacity: 1; 
+            
+            /* 1. 移除 left/top 的 will-change，减少移动端布局抖动 */
+            will-change: transform; 
+            
+            /* 2. 移动端抗频闪核心 Hack */
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            -webkit-perspective: 1000;
+            perspective: 1000;
+            
             -webkit-font-smoothing: none;
             transition: font-size 0.3s, color 0.3s, text-shadow 0.3s, background 0.3s;
         }}
@@ -115,42 +126,33 @@ html_code = f"""
         #file-input {{ position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0;}}
         .footer-text {{ margin-top: 20px; font-family: 'Courier New', Courier, monospace; color: rgba(255, 255, 255, 0.6); font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; text-align: center; }}
 
-        /* === 📱 手机端自适应 (关键修改) === */
+        /* === 📱 手机端自适应 === */
         @media (max-width: 768px) {{
             body {{ padding: 10px; }}
             .tv-set {{ padding: 10px; border-radius: 15px; margin-bottom: 15px; }}
             #meme-canvas {{ border-radius: 20px / 5px; }}
-            
             #controls {{ padding: 10px; gap: 10px; }}
-            
-            /* 强制改为 Grid 布局，不再挤在一行 */
             .control-row {{
                 display: grid !important;
-                grid-template-columns: 1fr 1fr 1fr; /* 默认3列 */
+                grid-template-columns: 1fr 1fr 1fr;
                 gap: 8px;
             }}
-            
-            /* 输入框占满整行 */
             #textInput {{
                 grid-column: span 3; 
                 width: 100%;
                 margin-bottom: 5px;
-                font-size: 16px; /* 防止iOS缩放 */
+                font-size: 16px; 
             }}
-            
-            /* 按钮样式调整 */
             .retro-btn {{
-                flex: none !important; /* 覆盖内联样式 */
+                flex: none !important;
                 width: auto !important;
-                font-size: 11px; /* 稍微调小字号 */
+                font-size: 11px;
                 padding: 5px 2px;
-                height: 44px; /* 增加高度，方便点击 */
-                white-space: normal; /* 允许文字换行 */
+                height: 44px;
+                white-space: normal;
                 line-height: 1.1;
                 text-align: center;
             }}
-            
-            /* 第二行的按钮只有5个，3列布局会自动排成 3+2 */
         }}
     </style>
 </head>
@@ -351,7 +353,9 @@ html_code = f"""
                      const rotate = Math.floor(Math.random() * 60) - 30;
                      transformCSS += ` rotate(${{rotate}}deg)`;
                 }}
-                this.element.style.transform = transformCSS;
+                
+                // 3. 关键修改：强制增加 translateZ(0) 以触发 3D 加速，解决手机端频闪
+                this.element.style.transform = transformCSS + " translateZ(0)";
             }}
             
             update() {{
@@ -370,6 +374,7 @@ html_code = f"""
                 if (this.y <= safeBuffer) {{ this.vy = Math.abs(this.vy); this.y = safeBuffer; }} 
                 else if (this.y + h >= maxH - safeBuffer) {{ this.vy = -Math.abs(this.vy); this.y = maxH - h - safeBuffer; }}
 
+                // 柔性排斥
                 for (const other of floaters) {{
                     if (other === this) continue;
                     const cx1 = this.x + w/2; const cy1 = this.y + h/2;
