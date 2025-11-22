@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 
 # 1. 页面配置
 st.set_page_config(
-    page_title="Retro Passion Maker",
+    page_title="Retro Passion Maker Pro",
     page_icon="📺",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -31,11 +31,10 @@ html_code = """
         body {
             margin: 0;
             padding: 20px;
-            /* 统一的深紫色复古背景 */
             background-color: #2d1b4e; 
             background-image: radial-gradient(#4a2c7a 1px, transparent 1px);
             background-size: 20px 20px;
-            font-family: 'Courier New', Courier, monospace; /* 复古等宽字体 */
+            font-family: 'Courier New', Courier, monospace;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -46,45 +45,43 @@ html_code = """
         /* === 2. 80年代电视机外框 === */
         .tv-set {
             background-color: #2a2a2a;
-            padding: 20px 20px 40px 20px; /* 底部留宽一点给Logo或散热孔 */
+            padding: 20px 20px 40px 20px;
             border-radius: 30px;
-            box-shadow: 
-                inset 0 0 10px #000, /* 内阴影 */
-                0 0 0 5px #111,      /* 边框线 */
-                0 20px 50px rgba(0,0,0,0.6); /* 电视机投下的阴影 */
-            border-bottom: 10px solid #1a1a1a; /* 底部厚度感 */
+            box-shadow: inset 0 0 10px #000, 0 0 0 5px #111, 0 20px 50px rgba(0,0,0,0.6);
+            border-bottom: 10px solid #1a1a1a;
             margin-bottom: 30px;
             position: relative;
         }
-        
-        /* 电视机品牌 Logo (纯装饰) */
         .tv-logo {
-            position: absolute;
-            bottom: 12px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #666;
-            font-weight: bold;
-            font-size: 12px;
-            letter-spacing: 2px;
-            text-shadow: -1px -1px 0 #000;
+            position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+            color: #666; font-weight: bold; font-size: 12px; letter-spacing: 2px; text-shadow: -1px -1px 0 #000;
         }
 
         /* === 3. 屏幕/画布 (4:3) === */
         #meme-canvas {
             position: relative;
-            width: 700px; /* 基础宽度 */
-            max-width: 90vw;
-            aspect-ratio: 4 / 3;
+            width: 700px; max-width: 90vw; aspect-ratio: 4 / 3;
             background-color: #ffffff; /* 默认背景 */
-            border-radius: 40px / 10px; /* 模拟CRT屏幕的微弧度 */
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5); /* 屏幕内陷感 */
+            border-radius: 40px / 10px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
             overflow: hidden;
             border: 2px solid #000;
             transition: background 0.3s;
         }
 
-        /* === 4. 漂浮文字 === */
+        /* === 新增：复古噪点纹理层 === */
+        #meme-canvas::after {
+            content: "";
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            /* 使用 Base64 编码的透明微噪点图片 */
+            background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAUVBMVEWFhYWDg4N3d3dtbW17e3t1dXV0dHR4eHh2dnZ6enp8fHx5eXl9fX1xcXF/f39wcHBzc3Nvb29TU1NEREQtLS0lJSUgICAfHx8QEBAAAAAA/wAkAAAAPnRSTlMAAQIDBAUGBwgJCgsMDQ4PEBITFBUWFxgZGhscHR4fICEiIyQmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0Zom6gAAAEZSURBVEjHhZKHctwwDANFaaTYRZvb/v9fN0hA4g1cOa3tK9c4FkWRokRKCgE/hJ1I8d/Zt2r58wWza3eF4H92v2m+gU+R8X+w5874D2z9F0j8C53jX+h3/IWH+Bdu+S9c418YFv+FufkXlvErbPErXN9+hU9/hX3/Fa7XW2Q1r9HXeI2u1it0/b5Ctl9B1+9/IXsE7P25QnZfIftv0M1+hWz+C9k/obcI2T2Bt98gO39B71+QnZeo9r9A7xW62+9R+xX2vEDvF+jdY7XfINsH9H4F7X6B7P8F7X+D7L4h92s0998gO19R+/+g2z/o9gH9+4LevoD+O+j/B/R+h/2+Qp7vUPN3qNl+Q+3W8x37B6jdfL9jV1G+X1H8A4x9d6nQ8oafAAAAAElFTkSuQmCC");
+            opacity: 0.2; /* 噪点浓度 */
+            pointer-events: none; /* 让点击穿透 */
+            z-index: 5; /* 在背景之上，文字之下 */
+            mix-blend-mode: overlay; /* 叠加模式 */
+        }
+
+        /* === 4. 漂浮文字 (修改：不透明，加大号) === */
         .floater {
             position: absolute;
             white-space: nowrap;
@@ -92,92 +89,28 @@ html_code = """
             font-weight: 900;
             line-height: 1;
             z-index: 10;
-            /* 混合模式让颜色叠加更有趣 */
-            mix-blend-mode: hard-light; 
-            /* 慢速变色动画 */
+            opacity: 1; /* 修改：完全不透明 */
+            /* 移除 mix-blend-mode 以获得实心感 */
+            /* mix-blend-mode: hard-light;  */
             animation: slowFloat 10s infinite linear alternate;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.2); /* 加一点硬阴影增加立体感 */
         }
         
         @keyframes slowFloat {
-            0% { filter: hue-rotate(0deg); }
-            100% { filter: hue-rotate(90deg); }
+            0% { filter: hue-rotate(0deg); transform: translateY(0px) rotate(var(--r-deg)) scaleX(var(--s-x)); }
+            100% { filter: hue-rotate(90deg); transform: translateY(-20px) rotate(var(--r-deg)) scaleX(var(--s-x));}
         }
 
-        /* === 5. 复古控制台 (Win95 风格) === */
+        /* === 5. 复古控制台 === */
         #controls {
-            background-color: #c0c0c0; /* 经典Win95灰 */
-            border-top: 2px solid #fff;
-            border-left: 2px solid #fff;
-            border-right: 2px solid #404040;
-            border-bottom: 2px solid #404040;
-            padding: 15px;
-            width: 700px;
-            max-width: 90vw;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            box-shadow: 5px 5px 0 rgba(0,0,0,0.3);
+            background-color: #c0c0c0; border-top: 2px solid #fff; border-left: 2px solid #fff; border-right: 2px solid #404040; border-bottom: 2px solid #404040;
+            padding: 15px; width: 700px; max-width: 90vw; display: flex; flex-direction: column; gap: 15px; box-shadow: 5px 5px 0 rgba(0,0,0,0.3);
         }
-
-        .control-row {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: space-between;
-        }
-
-        /* 复古输入框 */
-        input[type="text"] {
-            flex: 2;
-            background: #fff;
-            border-top: 2px solid #404040;
-            border-left: 2px solid #404040;
-            border-right: 2px solid #fff;
-            border-bottom: 2px solid #fff;
-            padding: 8px;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            outline: none;
-            font-size: 16px;
-        }
-
-        /* 复古按钮 */
-        .retro-btn {
-            background: #c0c0c0;
-            border-top: 2px solid #fff;
-            border-left: 2px solid #fff;
-            border-right: 2px solid #404040;
-            border-bottom: 2px solid #404040;
-            padding: 8px 15px;
-            cursor: pointer;
-            font-weight: bold;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            color: black;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .retro-btn:active {
-            border-top: 2px solid #404040;
-            border-left: 2px solid #404040;
-            border-right: 2px solid #fff;
-            border-bottom: 2px solid #fff;
-            transform: translate(1px, 1px); /* 按压位移 */
-        }
-        
-        /* 小标题 */
-        .panel-label {
-            font-size: 12px;
-            margin-bottom: 5px;
-            color: #333;
-            text-transform: uppercase;
-        }
-
-        /* 隐藏的文件上传 */
+        .control-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; }
+        input[type="text"] { flex: 2; background: #fff; border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; padding: 8px; font-family: 'Courier New', monospace; font-weight: bold; outline: none; font-size: 18px; }
+        .retro-btn { background: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040; padding: 8px 15px; cursor: pointer; font-weight: bold; font-family: 'Courier New', monospace; font-size: 14px; color: black; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        .retro-btn:active { border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; transform: translate(1px, 1px); }
+        .panel-label { font-size: 12px; margin-bottom: 5px; color: #333; text-transform: uppercase; }
         #file-input { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0;}
 
     </style>
@@ -185,37 +118,29 @@ html_code = """
 <body>
 
     <div class="tv-set">
-        <div id="meme-canvas">
-            </div>
+        <div id="meme-canvas"></div>
         <div class="tv-logo">SONY TRINITRON</div>
     </div>
 
     <div id="controls">
         <div>
-            <div class="panel-label">Text Generator</div>
+            <div class="panel-label">Text Generator (支持中文/符号拆分)</div>
             <div class="control-row">
-                <input type="text" id="text-input" placeholder="TYPE HERE..." value="GRAPHIC DESIGN IS MY PASSION">
+                <input type="text" id="text-input" placeholder="输入文字或符号..." value="设计!!!Passion">
                 <button class="retro-btn" onclick="spawnSentence()">ADD TEXT</button>
             </div>
         </div>
-
         <div>
-            <div class="panel-label">Background System</div>
+            <div class="panel-label">Background System (带噪点纹理)</div>
             <div class="control-row">
                 <button class="retro-btn" onclick="setBg('white')">⬜ Pure White</button>
-                <button class="retro-btn" onclick="setBg('rainbow')">🌈 Rainbow</button>
+                <button class="retro-btn" onclick="setRandomRainbowBg()">🌈 Random Rainbow</button>
                 <button class="retro-btn" onclick="setBg('win98')" style="background:#008080; color:white;">💻 Win98</button>
-                <button class="retro-btn">
-                    📂 Upload Img
-                    <input type="file" id="file-input" accept="image/*">
-                </button>
+                <button class="retro-btn">📂 Upload Img <input type="file" id="file-input" accept="image/*"></button>
             </div>
         </div>
-
         <div style="margin-top:5px;">
-            <button class="retro-btn" style="width: 100%; font-size: 16px;" onclick="exportMeme()">
-                💾 SAVE TO DISK (EXPORT MEME)
-            </button>
+            <button class="retro-btn" style="width: 100%; font-size: 16px;" onclick="exportMeme()">💾 SAVE TO DISK (EXPORT MEME)</button>
         </div>
     </div>
 
@@ -223,13 +148,30 @@ html_code = """
         const canvas = document.getElementById('meme-canvas');
         const textInput = document.getElementById('text-input');
         let floaters = [];
+        const fontFamilies = ['"Comic Sans MS"', 'Impact', '"Times New Roman"', 'Arial Black', 'Papyrus', 'Courier New', 'Verdana', '"Brush Script MT"'];
 
-        // 丑陋字体库
-        const fontFamilies = ['"Comic Sans MS"', 'Impact', '"Times New Roman"', 'Arial Black', 'Papyrus', 'Courier New', 'Verdana'];
+        function randomColor() { return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`; }
 
-        // 生成随机颜色
-        function randomColor() {
-            return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`;
+        // === 新增：智能分词逻辑 ===
+        function segmentText(text) {
+            text = text.trim();
+            if (!text) return [];
+            // 如果包含空格，按空格拆分 (西文模式)
+            if (text.includes(' ')) {
+                return text.split(' ').filter(w => w.length > 0);
+            } else {
+                // 如果没有空格，进行随机碎片化拆分 (中文/符号模式)
+                const chunks = [];
+                let i = 0;
+                while (i < text.length) {
+                    // 随机截取 1 到 3 个字符
+                    let remaining = text.length - i;
+                    let chunkLen = Math.floor(Math.random() * Math.min(remaining, 3)) + 1;
+                    chunks.push(text.substr(i, chunkLen));
+                    i += chunkLen;
+                }
+                return chunks;
+            }
         }
 
         class Floater {
@@ -237,132 +179,99 @@ html_code = """
                 this.element = document.createElement('div');
                 this.element.className = 'floater';
                 this.element.innerText = text;
-                
-                // 1. 随机字体
                 this.element.style.fontFamily = fontFamilies[Math.floor(Math.random() * fontFamilies.length)];
                 
-                // 2. 随机大小
-                const size = Math.floor(Math.random() * 40) + 20;
+                // 修改：加大字号，最低 40px
+                const size = Math.floor(Math.random() * 60) + 40;
                 this.element.style.fontSize = `${size}px`;
                 
-                // === 3. 颜色与描边 (修改点：随机决定是否有描边) ===
                 const mainColor = randomColor();
                 this.element.style.color = mainColor;
-
-                // 50% 的概率添加描边
+                // 50% 概率描边
                 if (Math.random() > 0.5) {
-                    const strokeColor = randomColor();
-                    // 随机描边宽度 1px - 3px
-                    const strokeW = Math.floor(Math.random() * 3) + 1; 
-                    this.element.style.webkitTextStroke = `${strokeW}px ${strokeColor}`;
+                    const strokeW = Math.floor(Math.random() * 4) + 2; // 描边稍微粗一点
+                    this.element.style.webkitTextStroke = `${strokeW}px ${randomColor()}`;
                 } else {
                     this.element.style.webkitTextStroke = 'none';
                 }
                 
-                // 4. 变形
                 const rotate = Math.floor(Math.random() * 60) - 30;
-                const scaleX = 0.5 + Math.random(); 
-                this.element.style.transform = `rotate(${rotate}deg) scaleX(${scaleX})`;
-
-                // 5. 点击删除
-                this.element.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.element.remove();
-                });
-
+                const scaleX = 0.6 + Math.random() * 0.8; 
+                // 将随机值存入 CSS 变量，供动画使用
+                this.element.style.setProperty('--r-deg', `${rotate}deg`);
+                this.element.style.setProperty('--s-x', `${scaleX}`);
+                
+                this.element.addEventListener('click', (e) => { e.stopPropagation(); this.element.remove(); });
                 canvas.appendChild(this.element);
 
-                // 6. 位置与速度 (慢速)
-                this.x = Math.random() * (canvas.clientWidth - 50);
-                this.y = Math.random() * (canvas.clientHeight - 50);
-                this.vx = (Math.random() - 0.5) * 1.5; // 速度慢一点
+                this.x = Math.random() * (canvas.clientWidth - 100);
+                this.y = Math.random() * (canvas.clientHeight - 100);
+                this.vx = (Math.random() - 0.5) * 1.5;
                 this.vy = (Math.random() - 0.5) * 1.5;
             }
-
             update() {
-                this.x += this.vx;
-                this.y += this.vy;
-
-                // 简单的边界碰撞
+                this.x += this.vx; this.y += this.vy;
                 if (this.x <= 0 || this.x >= canvas.clientWidth - this.element.offsetWidth) this.vx *= -1;
                 if (this.y <= 0 || this.y >= canvas.clientHeight - this.element.offsetHeight) this.vy *= -1;
-
-                this.element.style.left = `${this.x}px`;
-                this.element.style.top = `${this.y}px`;
+                this.element.style.left = `${this.x}px`; this.element.style.top = `${this.y}px`;
             }
         }
 
         function spawnSentence() {
-            const text = textInput.value.trim();
-            if(!text) return;
-            // 拆分单词
-            const words = text.split(' ').filter(w => w.length > 0);
+            const text = textInput.value;
+            // 使用新的分词函数
+            const words = segmentText(text);
             words.forEach(w => floaters.push(new Floater(w)));
-            textInput.value = ''; // 清空
+            textInput.value = '';
         }
 
-        // 背景切换逻辑
-        function setBg(type) {
-            canvas.style.backgroundImage = 'none'; // 先清除图片
-            if (type === 'white') {
-                canvas.style.background = '#ffffff';
-            } else if (type === 'rainbow') {
-                canvas.style.background = 'linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet)';
-            } else if (type === 'win98') {
-                // 经典的 Win98 蓝绿色
-                canvas.style.background = '#008080'; 
+        // === 新增：随机彩虹渐变背景生成器 ===
+        function setRandomRainbowBg() {
+            const angle = Math.floor(Math.random() * 360); // 随机角度
+            // 生成 3 到 6 个随机颜色
+            let colors = [];
+            const numColors = Math.floor(Math.random() * 4) + 3; 
+            for(let i=0; i<numColors; i++) {
+                colors.push(randomColor());
             }
+            // 拼接渐变字符串
+            const gradient = `linear-gradient(${angle}deg, ${colors.join(', ')})`;
+            canvas.style.background = gradient;
         }
 
-        // 图片上传
+        function setBg(type) {
+            if (type === 'white') canvas.style.background = '#ffffff';
+            else if (type === 'win98') canvas.style.background = '#008080';
+        }
+
         document.getElementById('file-input').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (evt) => {
-                    canvas.style.background = `url(${evt.target.result}) center/cover no-repeat`;
-                };
+                reader.onload = (evt) => canvas.style.background = `url(${evt.target.result}) center/cover no-repeat`;
                 reader.readAsDataURL(file);
             }
         });
 
-        // 导出
         function exportMeme() {
-            // 截屏时需要去除电视框的圆角和阴影，只截取内容
+            // 截图前临时移除电视框样式和噪点层，只保留纯净内容
             const originalRadius = canvas.style.borderRadius;
             const originalShadow = canvas.style.boxShadow;
             const originalBorder = canvas.style.border;
+            canvas.style.borderRadius = '0'; canvas.style.boxShadow = 'none'; canvas.style.border = 'none';
             
-            // 临时去除样式以便得到干净的矩形图片
-            canvas.style.borderRadius = '0';
-            canvas.style.boxShadow = 'none';
-            canvas.style.border = 'none';
+            // 临时隐藏噪点层以便截图更清晰(可选，如果不隐藏就是带噪点的图)
+            // const noiseLayer = window.getComputedStyle(canvas, '::after');
+            // 我们这里选择保留噪点，因为这是风格的一部分！
 
             html2canvas(canvas, { scale: 2 }).then(blob => {
-                const link = document.createElement('a');
-                link.download = 'retro-passion.png';
-                link.href = blob.toDataURL('image/png');
-                link.click();
-
-                // 恢复样式
-                canvas.style.borderRadius = originalRadius;
-                canvas.style.boxShadow = originalShadow;
-                canvas.style.border = originalBorder;
+                const link = document.createElement('a'); link.download = 'retro-passion-pro.png'; link.href = blob.toDataURL('image/png'); link.click();
+                canvas.style.borderRadius = originalRadius; canvas.style.boxShadow = originalShadow; canvas.style.border = originalBorder;
             });
         }
 
-        function animate() {
-            floaters.forEach(f => f.update());
-            requestAnimationFrame(animate);
-        }
-        
-        // 启动
-        window.onload = () => {
-            setTimeout(spawnSentence, 500);
-            animate();
-        };
-        
-        // 回车支持
+        function animate() { floaters.forEach(f => f.update()); requestAnimationFrame(animate); }
+        window.onload = () => { setTimeout(spawnSentence, 500); animate(); };
         textInput.addEventListener('keypress', (e) => e.key === 'Enter' && spawnSentence());
 
     </script>
