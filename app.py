@@ -103,8 +103,8 @@ html_code = f"""
         .retro-btn:active {{ border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; transform: translate(1px, 1px); }}
         .retro-btn.danger {{ color: red; }}
         .retro-btn.action {{ color: blue; }}
-        .panel-label {{ font-size: 12px; margin-bottom: 5px; color: #333; text-transform: uppercase; }}
         #file-input {{ position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0;}}
+
         .footer-text {{ margin-top: 20px; font-family: 'Courier New', Courier, monospace; color: rgba(255, 255, 255, 0.6); font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; text-align: center; }}
 
         /* === 移动端适配 === */
@@ -145,11 +145,11 @@ html_code = f"""
             .retro-btn {{
                 font-size: 12px;
                 height: auto;
-                white-space: normal; /* 允许按钮文字换行 */
+                white-space: normal;
                 padding: 8px 10px;
             }}
 
-            /* 移动端降低漂浮字的渲染复杂度，减少闪屏 */
+            /* 移动端降低文字特效以防闪屏 */
             .floater {{
                 -webkit-font-smoothing: antialiased;
                 text-rendering: optimizeLegibility;
@@ -167,7 +167,6 @@ html_code = f"""
 
     <div id="controls">
         <div>
-            <div class="panel-label">Text Generator</div>
             <div class="control-row">
                 <input type="text" id="textInput" placeholder="Type your passion..." value="Design is My Passion !!!">
                 <button class="retro-btn" style="flex:0.5;" onclick="spawnSentence()">ADD TEXT</button>
@@ -176,7 +175,6 @@ html_code = f"""
             </div>
         </div>
         <div>
-            <div class="panel-label">Background System</div>
             <div class="control-row">
                 <button class="retro-btn" onclick="setBg('white')">⬜ White</button>
                 <button class="retro-btn" onclick="setHighSatRainbow()">🌈 Rainbow</button>
@@ -192,247 +190,233 @@ html_code = f"""
 
     <div class="footer-text">© 2025 Leki's Arc Inc.</div>
 
-    <script>
-        const canvas = document.getElementById('meme-canvas');
-        const textInput = document.getElementById('textInput');
-        let floaters = [];
-        const fontFamilies = ['"Comic Sans MS"', 'Impact', '"Times New Roman"', 'Arial Black', 'Papyrus', 'Courier New', 'Verdana', '"Brush Script MT"'];
-        const blissData = "{final_bliss_url}";
-        const BASE_SPEED = 0.4;  // 控制整体移动速度
+<script>
+    const canvas = document.getElementById('meme-canvas');
+    const textInput = document.getElementById('textInput');
+    const blissData = "{final_bliss_url}";
+    const BASE_SPEED = 0.8;
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    let floaters = [];
 
-        const highSatGradients = [
-            "linear-gradient(180deg, #FF0000 0%, #FF7F00 15%, #FFFF00 30%, #00FF00 50%, #0000FF 70%, #4B0082 85%, #9400D3 100%)",
-            "linear-gradient(45deg, #FF0000, #FFFF00, #0000FF, #FF0000)",
-            "linear-gradient(135deg, #FF00CC 0%, #333399 100%)", 
-            "linear-gradient(90deg, #00FF00, #FF00FF, #00FFFF, #FFFF00)",
-            "radial-gradient(circle, #FFFF00 0%, #FF0000 100%)",
-            "linear-gradient(120deg, #e4ff00 0%, #ff0055 50%, #00ccff 100%)",
-            "linear-gradient(to bottom right, #2C3E50, #FD746C)",
-            "linear-gradient(to bottom, #00F260, #0575E6)" 
-        ];
+    const fontFamilies = ['"Comic Sans MS"', 'Impact', '"Times New Roman"', 'Arial Black', 'Papyrus', 'Courier New', 'Verdana', '"Brush Script MT"'];
 
-        let rainbowClickCount = 0;
-        function randomColor() {{ return `hsl(${{Math.floor(Math.random() * 360)}}, 100%, 50%)`; }}
+    const highSatGradients = [
+        "linear-gradient(180deg, #FF0000 0%, #FF7F00 15%, #FFFF00 30%, #00FF00 50%, #0000FF 70%, #4B0082 85%, #9400D3 100%)",
+        "linear-gradient(45deg, #FF0000, #FFFF00, #0000FF, #FF0000)",
+        "linear-gradient(135deg, #FF00CC 0%, #333399 100%)", 
+        "linear-gradient(90deg, #00FF00, #FF00FF, #00FFFF, #FFFF00)",
+        "radial-gradient(circle, #FFFF00 0%, #FF0000 100%)",
+        "linear-gradient(120deg, #e4ff00 0%, #ff0055 50%, #00ccff 100%)",
+        "linear-gradient(to bottom right, #2C3E50, #FD746C)",
+        "linear-gradient(to bottom, #00F260, #0575E6)" 
+    ];
 
-        function segmentText(text) {{
-            text = text.trim();
-            if (!text) return [];
-            if (text.includes(' ')) return text.split(/\\s+/).filter(w => w.length > 0);
-            if (window.Intl && Intl.Segmenter) {{
-                try {{
-                    const segmenter = new Intl.Segmenter('zh-CN', {{ granularity: 'word' }});
-                    return Array.from(segmenter.segment(text)).map(s => s.segment).filter(s => s.trim().length > 0);
-                }} catch (e) {{ return text.split(''); }}
-            }} else {{ return text.split(''); }}
-        }}
+    function randomColor() { return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`; }
 
-        class Floater {{
-            constructor(text) {{
-                this.element = document.createElement('div');
-                this.element.className = 'floater';
-                this.element.innerText = text;
+    class Floater {
+        constructor(text) {
+            this.element = document.createElement('div');
+            this.element.className = 'floater';
+            this.element.innerText = text;
 
-                const safeMargin = 100;
-                this.x = safeMargin + Math.random() * (canvas.clientWidth - 2 * safeMargin);
-                this.y = safeMargin + Math.random() * (canvas.clientHeight - 2 * safeMargin);
+            const safeMargin = 100;
+            this.x = safeMargin + Math.random() * (canvas.clientWidth - 2 * safeMargin);
+            this.y = safeMargin + Math.random() * (canvas.clientHeight - 2 * safeMargin);
 
-                this.vx = (Math.random() - 0.5) * BASE_SPEED;
-                this.vy = (Math.random() - 0.5) * BASE_SPEED;
+            this.vx = (Math.random() - 0.5) * BASE_SPEED;
+            this.vy = (Math.random() - 0.5) * BASE_SPEED;
 
-                this.applyRandomStyle();
-                this.element.addEventListener('click', (e) => {{ 
-                    e.stopPropagation(); 
-                    this.element.remove(); 
-                }});
-                canvas.appendChild(this.element);
-            }}
+            this.applyRandomStyle();
+            this.element.addEventListener('click', (e) => { e.stopPropagation(); this.element.remove(); });
+            canvas.appendChild(this.element);
+        }
 
-            applyRandomStyle() {{
-                this.element.style.fontFamily = fontFamilies[Math.floor(Math.random() * fontFamilies.length)];
-                const size = Math.floor(Math.random() * 120) + 30;
-                this.element.style.fontSize = `${{size}}px`;
+        applyRandomStyle() {
+            this.element.style.fontFamily = fontFamilies[Math.floor(Math.random() * fontFamilies.length)];
+            const size = Math.floor(Math.random() * 120) + 30;
+            this.element.style.fontSize = `${size}px`;
 
+            if (isMobile) {
                 this.element.style.cssText = `
-                    font-family: ${{this.element.style.fontFamily}};
-                    font-size: ${{size}}px;
+                    font-family: ${this.element.style.fontFamily};
+                    font-size: ${size}px;
                     position: absolute;
                     white-space: nowrap;
                     cursor: grab;
                     z-index: 10;
                     opacity: 1;
                     display: inline-block;
-                    will-change: transform, left, top;
-                    -webkit-font-smoothing: none;
-                    text-rendering: geometricPrecision;
-                    padding: 20px;
-                    line-height: 1.5;
-                    transition: font-size 0.3s, color 0.3s, text-shadow 0.3s;
-                    left: ${{this.x}}px;
-                    top: ${{this.y}}px;
+                    padding: 12px 16px;
+                    line-height: 1.4;
+                    left: ${this.x}px;
+                    top: ${this.y}px;
+                    color: #ffffff;
+                    text-shadow: 2px 2px 0 #000000;
+                    -webkit-font-smoothing: antialiased;
+                    text-rendering: optimizeLegibility;
+                    will-change: left, top;
                 `;
+                this.element.style.transform = 'none';
+                return;
+            }
 
-                const styleType = Math.floor(Math.random() * 6); 
-                const color1 = randomColor();
-                const color2 = randomColor();
+            this.element.style.cssText = `
+                font-family: ${this.element.style.fontFamily};
+                font-size: ${size}px;
+                position: absolute;
+                white-space: nowrap;
+                cursor: grab;
+                z-index: 10;
+                opacity: 1;
+                display: inline-block;
+                will-change: transform, left, top;
+                -webkit-font-smoothing: none;
+                text-rendering: geometricPrecision;
+                padding: 20px;
+                line-height: 1.5;
+                transition: font-size 0.3s, color 0.3s, text-shadow 0.3s;
+                left: ${this.x}px;
+                top: ${this.y}px;
+            `;
+
+            const styleType = Math.floor(Math.random() * 6);
+            const color1 = randomColor();
+            const color2 = randomColor();
+
+            let transformCSS = "";
+
+            if (styleType === 0) {
+                this.element.style.color = "#fff";
+                this.element.style.webkitTextStroke = "2px black";
+                this.element.style.textShadow = `4px 4px 0 ${color1}, 8px 8px 0 ${color2}`;
+                this.element.style.fontWeight = "900";
+            } 
+            else if (styleType === 1) {
+                this.element.style.color = color1;
+                this.element.style.textShadow = `1px 1px 0 #000, 2px 2px 0 #000, 3px 3px 0 #000, 4px 4px 0 #000, 5px 5px 0 ${color2}`;
+                transformCSS += " skew(-10deg)";
+            } 
+            else if (styleType === 2) {
+                this.element.style.color = color1;
+                this.element.style.webkitTextStroke = `4px black`; 
+                this.element.style.paintOrder = "stroke fill"; 
+            } 
+            else if (styleType === 3) {
+                this.element.style.color = "#00ff00"; 
+                this.element.style.textShadow = `-3px 0 red, 3px 0 blue`;
+                this.element.style.fontFamily = '"Courier New", monospace';
+            } 
+            else if (styleType === 4) {
+                this.element.style.color = color1;
+                const scaleX = 0.6 + Math.random() * 1.2; 
+                const scaleY = 0.6 + Math.random() * 0.8; 
+                const skew = Math.random() * 40 - 20;     
+                transformCSS += ` scale(${scaleX}, ${scaleY}) skew(${skew}deg)`;
+                if (Math.random()>0.5) this.element.style.webkitTextStroke = "1px black";
+            }
+            else {
+                this.element.style.color = color1;
+                let scaleX, scaleY;
+                if (Math.random() > 0.5) {
+                    scaleX = 1.5 + Math.random() * 1.5; 
+                    scaleY = 0.6 + Math.random() * 0.2; 
+                } else {
+                    scaleX = 0.4 + Math.random() * 0.3; 
+                    scaleY = 1.5 + Math.random() * 1.5; 
+                }
+                transformCSS += ` scale(${scaleX.toFixed(2)}, ${scaleY.toFixed(2)})`;
+                if (Math.random() > 0.5) this.element.style.webkitTextStroke = "1px black";
+            }
+
+            if (!transformCSS.includes("rotate")) {
+                const rotate = Math.floor(Math.random() * 60) - 30;
+                transformCSS += ` rotate(${rotate}deg)`;
+            }
                 
-                let transformCSS = "";
-
-                if (styleType === 0) {{
-                    // Style 0: 叠叠乐
-                    this.element.style.color = "#fff";
-                    this.element.style.webkitTextStroke = "2px black";
-                    this.element.style.textShadow = `4px 4px 0 ${{color1}}, 8px 8px 0 ${{color2}}`;
-                    this.element.style.fontWeight = "900";
-                }} 
-                else if (styleType === 1) {{
-                    // Style 1: 3D Retro
-                    this.element.style.color = color1;
-                    this.element.style.textShadow = `1px 1px 0 #000, 2px 2px 0 #000, 3px 3px 0 #000, 4px 4px 0 #000, 5px 5px 0 ${{color2}}`;
-                    transformCSS += " skew(-10deg)";
-                }} 
-                else if (styleType === 2) {{
-                    // Style 2: 大描边
-                    this.element.style.color = color1;
-                    this.element.style.webkitTextStroke = `4px black`; 
-                    this.element.style.paintOrder = "stroke fill"; 
-                }} 
-                else if (styleType === 3) {{
-                    // Style 3: 故障风
-                    this.element.style.color = "#00ff00"; 
-                    this.element.style.textShadow = `-3px 0 red, 3px 0 blue`;
-                    this.element.style.fontFamily = '"Courier New", monospace';
-                }} 
-                else if (styleType === 4) {{
-                    // Style 4: 轻度变形
-                    this.element.style.color = color1;
-                    const scaleX = 0.6 + Math.random() * 1.2; 
-                    const scaleY = 0.6 + Math.random() * 0.8; 
-                    const skew = Math.random() * 40 - 20;     
-                    transformCSS += ` scale(${{scaleX}}, ${{scaleY}}) skew(${{skew}}deg)`;
-                    if (Math.random()>0.5) this.element.style.webkitTextStroke = "1px black";
-                }}
-                else {{
-                    // Style 5: 极限拉伸
-                    this.element.style.color = color1;
-                    let scaleX, scaleY;
-                    if (Math.random() > 0.5) {{
-                        scaleX = 1.5 + Math.random() * 1.5; 
-                        scaleY = 0.6 + Math.random() * 0.2; 
-                    }} else {{
-                        scaleX = 0.4 + Math.random() * 0.3; 
-                        scaleY = 1.5 + Math.random() * 1.5; 
-                    }}
-                    transformCSS += ` scale(${{scaleX.toFixed(2)}}, ${{scaleY.toFixed(2)}})`;
-                    if (Math.random() > 0.5) this.element.style.webkitTextStroke = "1px black";
-                }}
-
-                if (!transformCSS.includes("rotate")) {{
-                    const rotate = Math.floor(Math.random() * 60) - 30;
-                    transformCSS += ` rotate(${{rotate}}deg)`;
-                }}
-                
-                this.element.style.transform = transformCSS;
-            }}
+            this.element.style.transform = transformCSS;
+        }
             
-            update() {{
-                const w = this.element.offsetWidth;
-                const h = this.element.offsetHeight;
-                const maxW = canvas.clientWidth;
-                const maxH = canvas.clientHeight;
-                const safeBuffer = 50; 
+        update() {
+            const w = this.element.offsetWidth;
+            const h = this.element.offsetHeight;
+            const maxW = canvas.clientWidth;
+            const maxH = canvas.clientHeight;
+            const safeBuffer = 50; 
 
-                this.x += this.vx; 
-                this.y += this.vy;
+            this.x += this.vx; this.y += this.vy;
 
-                if (this.x <= safeBuffer) {{ this.vx = Math.abs(this.vx); this.x = safeBuffer; }} 
-                else if (this.x + w >= maxW - safeBuffer) {{ this.vx = -Math.abs(this.vx); this.x = maxW - w - safeBuffer; }}
+            if (this.x <= safeBuffer) { this.vx = Math.abs(this.vx); this.x = safeBuffer; } 
+            else if (this.x + w >= maxW - safeBuffer) { this.vx = -Math.abs(this.vx); this.x = maxW - w - safeBuffer; }
 
-                if (this.y <= safeBuffer) {{ this.vy = Math.abs(this.vy); this.y = safeBuffer; }} 
-                else if (this.y + h >= maxH - safeBuffer) {{ this.vy = -Math.abs(this.vy); this.y = maxH - h - safeBuffer; }}
+            if (this.y <= safeBuffer) { this.vy = Math.abs(this.vy); this.y = safeBuffer; } 
+            else if (this.y + h >= maxH - safeBuffer) { this.vy = -Math.abs(this.vy); this.y = maxH - h - safeBuffer; }
 
-                this.element.style.left = `${{this.x}}px`; 
-                this.element.style.top = `${{this.y}}px`;
-            }}
-        }}
+            this.element.style.left = `${this.x}px`; 
+            this.element.style.top = `${this.y}px`;
+        }
+    }
 
-        function spawnSentence() {{
-            const text = textInput.value;
-            const words = segmentText(text);
-            words.forEach(w => floaters.push(new Floater(w)));
-            textInput.value = '';
-        }}
+    function spawnSentence() {
+        const text = textInput.value.trim();
+        if (!text) return;
+        const words = text.includes(' ') ? text.split(/\\s+/) : text.split('');
+        words.forEach(w => floaters.push(new Floater(w)));
+        textInput.value = '';
+    }
 
-        function restyleAll() {{
-            floaters.forEach(f => f.applyRandomStyle());
-        }}
+    function restyleAll() { floaters.forEach(f => f.applyRandomStyle()); }
+    function clearCanvas() { floaters = []; canvas.innerHTML = ''; }
 
-        function clearCanvas() {{ 
-            floaters = []; 
-            canvas.innerHTML = ''; 
-        }}
+    let rainbowClickCount = 0;
+    function setHighSatRainbow() {
+        const gradient = rainbowClickCount === 0 ? highSatGradients[0] : highSatGradients[Math.floor(Math.random() * highSatGradients.length)];
+        rainbowClickCount++;
+        canvas.style.background = gradient;
+        canvas.style.backgroundSize = "cover";
+    }
 
-        function setHighSatRainbow() {{
-            let gradient;
-            if (rainbowClickCount === 0) {{
-                gradient = highSatGradients[0];
-            }} else {{
-                gradient = highSatGradients[Math.floor(Math.random() * highSatGradients.length)];
-            }}
-            rainbowClickCount++;
-            canvas.style.background = gradient;
-            canvas.style.backgroundSize = "cover";
-        }}
+    function setBg(type) {
+        if (type === 'white') canvas.style.background = '#ffffff';
+        else if (type === 'win98') canvas.style.background = '#008080';
+        else if (type === 'bliss') canvas.style.background = `url('${blissData}') center/cover no-repeat`;
+    }
 
-        function setBg(type) {{
-            if (type === 'white') canvas.style.background = '#ffffff';
-            else if (type === 'win98') canvas.style.background = '#008080';
-            else if (type === 'bliss') {{
-                canvas.style.background = `url('${{blissData}}') center/cover no-repeat`;
-            }}
-        }}
+    document.getElementById('file-input').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (evt) => canvas.style.background = `url(${evt.target.result}) center/cover no-repeat`;
+            reader.readAsDataURL(file);
+        }
+        e.target.value = ''; 
+    });
 
-        document.getElementById('file-input').addEventListener('change', (e) => {{
-            const file = e.target.files[0];
-            if (file) {{
-                const reader = new FileReader();
-                reader.onload = (evt) => canvas.style.background = `url(${{evt.target.result}}) center/cover no-repeat`;
-                reader.readAsDataURL(file);
-            }}
-            e.target.value = ''; // 允许连续选择同一张图
-        }});
+    function exportMeme() {
+        const originalRadius = canvas.style.borderRadius;
+        const originalShadow = canvas.style.boxShadow;
+        const originalBorder = canvas.style.border;
+        canvas.style.borderRadius = '0'; canvas.style.boxShadow = 'none'; canvas.style.border = 'none';
+        html2canvas(canvas, { scale: 2 }).then(capturedCanvas => {
+            const link = document.createElement('a'); 
+            link.download = 'passion-meme.png'; 
+            link.href = capturedCanvas.toDataURL('image/png'); 
+            link.click();
+            canvas.style.borderRadius = originalRadius; 
+            canvas.style.boxShadow = originalShadow; 
+            canvas.style.border = originalBorder;
+        });
+    }
 
-        function exportMeme() {{
-            const originalRadius = canvas.style.borderRadius;
-            const originalShadow = canvas.style.boxShadow;
-            const originalBorder = canvas.style.border;
-            canvas.style.borderRadius = '0'; 
-            canvas.style.boxShadow = 'none'; 
-            canvas.style.border = 'none';
-            html2canvas(canvas, {{ scale: 2 }}).then(capturedCanvas => {{
-                const link = document.createElement('a'); 
-                link.download = 'passion-meme.png'; 
-                link.href = capturedCanvas.toDataURL('image/png'); 
-                link.click();
-                canvas.style.borderRadius = originalRadius; 
-                canvas.style.boxShadow = originalShadow; 
-                canvas.style.border = originalBorder;
-            }});
-        }}
+    function animate() { floaters.forEach(f => f.update()); requestAnimationFrame(animate); }
 
-        function animate() {{ 
-            floaters.forEach(f => f.update()); 
-            requestAnimationFrame(animate); 
-        }}
-        
-        window.onload = () => {{ 
-            setBg('bliss');
-            setTimeout(spawnSentence, 500); 
-            animate(); 
-        }};
-        
-        textInput.addEventListener('keypress', (e) => e.key === 'Enter' && spawnSentence());
+    window.onload = () => { 
+        setBg('bliss');
+        setTimeout(spawnSentence, 500); 
+        animate(); 
+    };
+    textInput.addEventListener('keypress', (e) => e.key === 'Enter' && spawnSentence());
+</script>
 
-    </script>
 </body>
 </html>
 """
