@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import base64
 import os
 
-# === 1. Python 后端：图片处理 ===
+# === 1. Python 后端 ===
 def get_image_base64(file_path):
     if os.path.exists(file_path):
         try:
@@ -75,7 +75,6 @@ html_code = f"""
             opacity: 0.1; pointer-events: none; z-index: 5; mix-blend-mode: overlay; background-size: 4px 4px;
         }}
 
-        /* 漂浮文字样式：移除 left/top 的 transition，防止与 JS 动画冲突导致抖动 */
         .floater {{
             position: absolute; 
             white-space: nowrap; 
@@ -87,7 +86,6 @@ html_code = f"""
             will-change: transform, left, top;
             z-index: 10; opacity: 1; 
             -webkit-font-smoothing: none;
-            /* 只对样式属性做过渡，不对位置做过渡 */
             transition: font-size 0.3s, color 0.3s, text-shadow 0.3s, background 0.3s;
         }}
 
@@ -178,50 +176,44 @@ html_code = f"""
                 this.element = document.createElement('div');
                 this.element.className = 'floater';
                 this.element.innerText = text;
-                
                 this.applyRandomStyle();
+                
                 this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
                 canvas.appendChild(this.element);
 
-                // === 生成时防重叠 (保留) ===
-                const safeMargin = 60; 
+                // 生成时的尝试逻辑 (保留)
+                const safeMargin = 50; 
                 const maxAttempts = 100;
-                let bestX = 0, bestY = 0;
+                let bestX = safeMargin + Math.random() * (canvas.clientWidth - 200);
+                let bestY = safeMargin + Math.random() * (canvas.clientHeight - 100);
 
                 for(let i=0; i<maxAttempts; i++) {{
-                    const elW = this.element.offsetWidth || 100;
-                    const elH = this.element.offsetHeight || 50;
-                    const maxX = canvas.clientWidth - elW - safeMargin;
-                    const maxY = canvas.clientHeight - elH - safeMargin;
+                    const elW = this.element.offsetWidth || 150;
+                    const elH = this.element.offsetHeight || 80;
+                    const rx = safeMargin + Math.random() * (canvas.clientWidth - elW - safeMargin);
+                    const ry = safeMargin + Math.random() * (canvas.clientHeight - elH - safeMargin);
                     
-                    const rx = safeMargin + Math.random() * Math.max(0, maxX);
-                    const ry = safeMargin + Math.random() * Math.max(0, maxY);
-                    
+                    // 简单检查碰撞
                     let isClean = true;
-                    const myRect = {{ l: rx, r: rx+elW, t: ry, b: ry+elH }};
-                    
                     for(const f of floaters) {{
                         if(!f.element) continue;
-                        const otherRect = {{
-                            l: f.x,
-                            r: f.x + f.element.offsetWidth,
-                            t: f.y,
-                            b: f.y + f.element.offsetHeight
-                        }};
-                        if (!(myRect.r < otherRect.l || myRect.l > otherRect.r || myRect.b < otherRect.t || myRect.t > otherRect.b)) {{
-                            isClean = false; break; 
+                        const dx = Math.abs((rx + elW/2) - (f.x + f.element.offsetWidth/2));
+                        const dy = Math.abs((ry + elH/2) - (f.y + f.element.offsetHeight/2));
+                        const minDistX = (elW + f.element.offsetWidth)/2;
+                        const minDistY = (elH + f.element.offsetHeight)/2;
+                        
+                        if(dx < minDistX && dy < minDistY) {{
+                            isClean = false; break;
                         }}
                     }}
                     if(isClean) {{
                         bestX = rx; bestY = ry; break;
                     }}
-                    bestX = rx; bestY = ry;
                 }}
 
                 this.x = bestX;
                 this.y = bestY;
-                // === 慢速移动 (Slow Motion) ===
-                this.vx = (Math.random() - 0.5) * 0.5; // 速度从 2 降到 0.5
+                this.vx = (Math.random() - 0.5) * 0.5; // 慢速
                 this.vy = (Math.random() - 0.5) * 0.5;
             }}
 
@@ -302,6 +294,7 @@ html_code = f"""
                 const maxH = canvas.clientHeight;
                 const safeBuffer = 30; 
 
+                // 移动
                 this.x += this.vx; 
                 this.y += this.vy;
 
@@ -312,8 +305,46 @@ html_code = f"""
                 if (this.y <= safeBuffer) {{ this.vy = Math.abs(this.vy); this.y = safeBuffer; }} 
                 else if (this.y + h >= maxH - safeBuffer) {{ this.vy = -Math.abs(this.vy); this.y = maxH - h - safeBuffer; }}
 
-                // 移除了导致抖动的实时碰撞代码
-                // 现在文字会丝滑地穿过彼此，配合慢速移动，效果更佳
+                // === 柔性排斥场 (Soft Repulsion Field) ===
+                // 这个逻辑不会导致抖动，而是产生丝滑的推离效果
+                for (const other of floaters) {{
+                    if (other === this) continue;
+                    
+                    // 获取中心点
+                    const cx1 = this.x + w/2;
+                    const cy1 = this.y + h/2;
+                    const cx2 = other.x + other.element.offsetWidth/2;
+                    const cy2 = other.y + other.element.offsetHeight/2;
+                    
+                    const dx = cx1 - cx2;
+                    const dy = cy1 - cy2;
+                    
+                    // 判断是否重叠 (使用简单的 AABB 矩形判断)
+                    const minDistX = (w + other.element.offsetWidth) / 2;
+                    const minDistY = (h + other.element.offsetHeight) / 2;
+                    
+                    // 如果两个矩形重叠了
+                    if (Math.abs(dx) < minDistX && Math.abs(dy) < minDistY) {{
+                        // 计算重叠深度
+                        const overlapX = minDistX - Math.abs(dx);
+                        const overlapY = minDistY - Math.abs(dy);
+                        
+                        // 找出最容易分离的方向
+                        if (overlapX < overlapY) {{
+                            // 横向推开 (力道很小，分摊到多帧)
+                            const force = overlapX * 0.05; // 5% 的修正力
+                            const dir = dx > 0 ? 1 : -1;
+                            this.x += dir * force;
+                            this.vx += dir * 0.05; // 稍微改变一点速度方向
+                        }} else {{
+                            // 纵向推开
+                            const force = overlapY * 0.05;
+                            const dir = dy > 0 ? 1 : -1;
+                            this.y += dir * force;
+                            this.vy += dir * 0.05;
+                        }}
+                    }}
+                }}
 
                 this.element.style.left = `${{this.x}}px`; 
                 this.element.style.top = `${{this.y}}px`;
