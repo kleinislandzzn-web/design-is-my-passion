@@ -33,7 +33,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# === 3. 核心 HTML/JS 代码（Bliss URL 用占位符 __BLISS_URL__） ===
+# === 3. 核心 HTML/JS 代码 ===
 html_code = """
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -41,236 +41,600 @@ html_code = """
     <meta charset="UTF-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
+        /* === 全局样式 === */
         body {
             margin: 0; padding: 20px; background-color: #2d1b4e;
             background-image: radial-gradient(#4a2c7a 1px, transparent 1px);
             background-size: 20px 20px; font-family: 'Courier New', Courier, monospace;
-            display: flex; flex-direction: column; align-items: center; min-height: 95vh;
+            display: flex; flex-direction: column; align-items: center; min-height: 95vh; box-sizing: border-box;
         }
 
+        /* === 电视机外框 === */
         .tv-set {
             background-color: #2a2a2a; padding: 20px 20px 40px 20px; border-radius: 30px;
             box-shadow: inset 0 0 10px #000, 0 0 0 5px #111, 0 20px 50px rgba(0,0,0,0.6);
             border-bottom: 10px solid #1a1a1a; margin-bottom: 30px; position: relative;
         }
-
         .tv-logo {
             position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
             color: #666; font-weight: bold; font-size: 12px; letter-spacing: 2px; text-shadow: -1px -1px 0 #000;
         }
 
+        /* === 画布 === */
         #meme-canvas {
-            position: relative;
-            width: 700px; max-width: 90vw; aspect-ratio: 4 / 3;
+            position: relative; width: 700px; max-width: 90vw; aspect-ratio: 4 / 3;
             background-color: #ffffff; border-radius: 40px / 10px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-            overflow: hidden; border: 2px solid #000; 
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5); overflow: hidden;
+            border: 2px solid #000; 
             filter: contrast(125%) brightness(105%);
+            image-rendering: pixelated;
         }
-
         #meme-canvas::after {
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAUVBMVEWFhYWDg4N3d3dtbW17e3t1dXV0dHR4eHh2dnZ6enp8fHx5eXl9fX1xcXF/f39wcHBzc3Nvb29TU1NEREQtLS0lJSUgICAfHx8QEBAAAAAA/wAkAAAAPnRSTlMAAQIDBAUGBwgJCgsMDQ4PEBITFBUWFxgZGhscHR4fICEiIyQmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0Zom6gAAAEZSURBVEjHhZKHctwwDANFaaTYRZvb/v9fN0hA4g1cOa3tK9c4FkWRokRKCgE/hJ1I8d/Zt2r58wWza3eF4H92v2m+gU+R8X+w5874D2z9F0j8C53jX+h3/IWH+Bdu+S9c418YFv+FufkXlvErbPErXN9+hU9/hX3/Fa7XW2Q1r9HXeI2u1it0/b5Ctl9B1+9/IXsE7P25QnZfIftv0M1+hWz+C9k/obcI2T2Bt98gO39B71+QnZeo9r9A7xW62+9R+xX2vEDvF+jdY7XfINsH9H4F7X+D7L4h92s0998gO19R+/+g2z/o9gH9+4LevoD+O+j/B/R+h/2+Qp7vUPN3qNl+Q+3W8x37B6jdfL9jV1G+X1H8A4x9d6nQ8oafAAAAAElFTkSuQmCC");
             opacity: 0.25; pointer-events: none; z-index: 5; mix-blend-mode: overlay;
         }
 
+        /* === 漂浮文字 === */
         .floater {
             position: absolute; 
-            white-space: nowrap; cursor: grab; 
-            font-weight: 900; padding: 12px 16px;
-            z-index: 10; display: inline-block;
-            transition: font-size 0.3s, color 0.3s, text-shadow 0.3s;
+            white-space: nowrap; 
+            cursor: grab; 
+            font-weight: 900; 
+            padding: 20px; 
+            line-height: 1.5; 
+            z-index: 10; 
+            opacity: 1; 
+            display: inline-block;
             will-change: transform, left, top;
+            -webkit-font-smoothing: none;
+            text-rendering: geometricPrecision;
+            transition: font-size 0.3s, color 0.3s, text-shadow 0.3s;
         }
 
+        /* === 控制面板 === */
         #controls {
             background-color: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040;
-            padding: 15px; width: 700px; max-width: 90vw; display: flex; flex-direction: column; gap: 15px;
-            box-shadow: 5px 5px 0 rgba(0,0,0,0.3);
+            padding: 15px; width: 700px; max-width: 90vw; display: flex; flex-direction: column; gap: 15px; box-shadow: 5px 5px 0 rgba(0,0,0,0.3);
         }
+        .control-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; align-items: center;}
+        input[type="text"] { flex: 2; background: #fff; border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; padding: 8px; font-family: 'Courier New', monospace; font-weight: bold; outline: none; font-size: 18px; }
+        .retro-btn { background: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040; padding: 8px 15px; cursor: pointer; font-weight: bold; font-family: 'Courier New', monospace; font-size: 12px; color: black; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; flex:1; white-space: nowrap; height: 36px; box-sizing: border-box; }
+        .retro-btn:active { border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; transform: translate(1px, 1px); }
+        .retro-btn.danger { color: red; }
+        .retro-btn.action { color: blue; }
+        #file-input { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0;}
 
-        .control-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .footer-text { margin-top: 20px; font-family: 'Courier New', Courier, monospace; color: rgba(255, 255, 255, 0.6); font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; text-align: center; }
 
-        input[type="text"] {
-            flex: 2; background: #fff; border: 2px solid #404040;
-            padding: 8px; font-family: 'Courier New', monospace; font-weight: bold; font-size: 18px;
-        }
-
-        .retro-btn {
-            background: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040;
-            padding: 8px 15px; cursor: pointer; font-weight: bold;
-            font-family: 'Courier New', monospace; font-size: 12px;
-            display: flex; align-items: center; justify-content: center;
-            flex:1; white-space: nowrap; height: 36px;
-        }
-
+        /* === 移动端适配 & 降噪 === */
         @media (max-width: 768px) {
-            input[type="text"] { font-size: 14px; padding: 6px; }
-            .retro-btn { font-size: 12px; height: auto; white-space: normal; padding: 8px; }
-            .floater { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-            #meme-canvas::after { opacity: 0; }
+            body {
+                padding: 10px;
+            }
+
+            .tv-set {
+                width: 100%;
+                padding: 10px 10px 30px 10px;
+            }
+
+            #meme-canvas {
+                width: 100%;
+                max-width: 100%;
+                border-radius: 24px / 8px;
+                filter: none;
+            }
+
+            #meme-canvas::after {
+                opacity: 0;
+                background-image: none;
+                content: "";
+            }
+
+            #controls {
+                width: 100%;
+                max-width: 100%;
+                padding: 10px;
+                gap: 10px;
+            }
+
+            .control-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            input[type="text"] {
+                font-size: 14px;
+                padding: 6px 8px;
+            }
+
+            .retro-btn {
+                font-size: 12px;
+                height: auto;
+                white-space: normal;
+                padding: 8px 10px;
+            }
+
+            .floater {
+                -webkit-font-smoothing: antialiased;
+                text-rendering: optimizeLegibility;
+                will-change: left, top;
+            }
         }
     </style>
 </head>
 <body>
 
-<div class="tv-set">
-    <div id="meme-canvas"></div>
-    <div class="tv-logo">SONY TRINITRON</div>
-</div>
+    <div class="tv-set">
+        <div id="meme-canvas"></div>
+        <div class="tv-logo">SONY TRINITRON</div>
+    </div>
 
-<div id="controls">
-    <div class="control-row">
-        <input type="text" id="textInput" placeholder="Type your passion..." value="Design is My Passion !!!">
-        <button class="retro-btn" onclick="spawnSentence()">ADD TEXT</button>
-        <button class="retro-btn" onclick="restyleAll()">🔀 RE-STYLE</button>
-        <button class="retro-btn" onclick="clearCanvas()">🗑️</button>
+    <div id="controls">
+        <div>
+            <div class="control-row">
+                <input type="text" id="textInput" placeholder="Type your passion..." value="Design is My Passion !!!">
+                <button class="retro-btn" style="flex:0.5;" onclick="spawnSentence()">ADD TEXT</button>
+                <button class="retro-btn action" style="flex:0.5;" onclick="restyleAll()">🔀 RE-STYLE</button>
+                <button class="retro-btn danger" style="flex:0.3;" onclick="clearCanvas()">🗑️</button>
+            </div>
+        </div>
+        <div>
+            <div class="control-row">
+                <button class="retro-btn" onclick="setBg('white')">⬜ White</button>
+                <button class="retro-btn" onclick="setHighSatRainbow()">🌈 Rainbow</button>
+                <button class="retro-btn" onclick="setBg('win98')" style="background:#008080; color:white;">💻 Win98</button>
+                <button class="retro-btn" onclick="setBg('bliss')" style="background: linear-gradient(to bottom, #62c2fc, #ffffff); color:black;">🏞️ Bliss</button>
+                <button class="retro-btn">📂 Upload <input type="file" id="file-input" accept="image/*"></button>
+            </div>
+        </div>
+        <div style="margin-top:5px;">
+            <button class="retro-btn" style="width: 100%; font-size: 16px;" onclick="exportMeme()">💾 EXPORT MEME</button>
+        </div>
     </div>
-    <div class="control-row">
-        <button class="retro-btn" onclick="setBg('white')">⬜ White</button>
-        <button class="retro-btn" onclick="setHighSatRainbow()">🌈 Rainbow</button>
-        <button class="retro-btn" onclick="setBg('win98')" style="background:#008080; color:white;">💻 Win98</button>
-        <button class="retro-btn" onclick="setBg('bliss')" style="background: linear-gradient(to bottom, #62c2fc, #ffffff); color:black;">🏞️ Bliss</button>
-        <button class="retro-btn">📂 Upload <input type="file" id="file-input" accept="image/*" style="opacity:0; position:absolute; width:100%; height:100%;"></button>
-    </div>
-    <button class="retro-btn" style="width:100%; font-size:16px;" onclick="exportMeme()">💾 EXPORT</button>
-</div>
+
+    <div class="footer-text">© 2025 Leki's Arc Inc.</div>
 
 <script>
-const canvas = document.getElementById('meme-canvas');
-const textInput = document.getElementById('textInput');
-const blissData = "__BLISS_URL__";
-const isMobile = window.matchMedia('(max-width: 768px)').matches;
-let floaters = [];
+    const canvas = document.getElementById('meme-canvas');
+    const textInput = document.getElementById('textInput');
+    const blissData = "__BLISS__";
+    const BASE_SPEED = 0.35;
+    const MIN_SPEED = 0.05;
+    const MAX_SPEED = 0.6;
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    let floaters = [];
 
-const BASE_SPEED = 0.30;
-const MIN_SPEED = 0.10;
-const MAX_SPEED = 0.45;
+    const fontFamilies = ['"Comic Sans MS"', 'Impact', '"Times New Roman"', 'Arial Black', 'Papyrus', 'Courier New', 'Verdana', '"Brush Script MT"'];
 
-function randomColor() { return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`; }
+    const highSatGradients = [
+        "linear-gradient(180deg, #FF0000 0%, #FF7F00 15%, #FFFF00 30%, #00FF00 50%, #0000FF 70%, #4B0082 85%, #9400D3 100%)",
+        "linear-gradient(45deg, #FF0000, #FFFF00, #0000FF, #FF0000)",
+        "linear-gradient(135deg, #FF00CC 0%, #333399 100%)", 
+        "linear-gradient(90deg, #00FF00, #FF00FF, #00FFFF, #FFFF00)",
+        "radial-gradient(circle, #FFFF00 0%, #FF0000 100%)",
+        "linear-gradient(120deg, #e4ff00 0%, #ff0055 50%, #00ccff 100%)",
+        "linear-gradient(to bottom right, #2C3E50, #FD746C)",
+        "linear-gradient(to bottom, #00F260, #0575E6)" 
+    ];
 
-class Floater {
-    constructor(text) {
-        this.element = document.createElement('div');
-        this.element.className = 'floater';
-        this.element.innerText = text;
-
-        const safe = 100;
-        this.x = safe + Math.random() * (canvas.clientWidth - 2 * safe);
-        this.y = safe + Math.random() * (canvas.clientHeight - 2 * safe);
-
-        this.vx = (Math.random() - 0.5) * BASE_SPEED;
-        this.vy = (Math.random() - 0.5) * BASE_SPEED;
-
-        this.applyStyle();
-        canvas.appendChild(this.element);
-        this.ensureInBounds();
+    function randomColor() {
+        return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`;
     }
 
-    applyStyle() {
-        const size = Math.floor(Math.random() * 90) + 40;
-        const color = randomColor();
+    class Floater {
+        constructor(text) {
+            this.element = document.createElement('div');
+            this.element.className = 'floater';
+            this.element.innerText = text;
 
-        if (isMobile) {
-            this.element.style.color = color;
+            const safeMargin = 80;
+            const maxW = canvas.clientWidth || 700;
+            const maxH = canvas.clientHeight || 500;
+
+            this.x = safeMargin + Math.random() * Math.max(10, (maxW - 2 * safeMargin));
+            this.y = safeMargin + Math.random() * Math.max(10, (maxH - 2 * safeMargin));
+
+            this.vx = (Math.random() - 0.5) * BASE_SPEED;
+            this.vy = (Math.random() - 0.5) * BASE_SPEED;
+
+            this.applyRandomStyle();
+            this.element.addEventListener('click', (e) => { e.stopPropagation(); this.element.remove(); });
+            canvas.appendChild(this.element);
+
+            this.resolveOverlap();   // 生成时先尽量不撞车
+            this.ensureInBounds();   // 再 clamp 进画布
+        }
+
+        ensureInBounds() {
+            const maxW = canvas.clientWidth || 700;
+            const maxH = canvas.clientHeight || 500;
+            const margin = 10;
+
+            const w = this.element.offsetWidth || 0;
+            const h = this.element.offsetHeight || 0;
+            if (!w || !h) return;
+
+            const maxX = Math.max(margin, maxW - w - margin);
+            const maxY = Math.max(margin, maxH - h - margin);
+
+            this.x = Math.min(Math.max(this.x, margin), maxX);
+            this.y = Math.min(Math.max(this.y, margin), maxY);
+
+            this.element.style.left = `${this.x}px`;
+            this.element.style.top = `${this.y}px`;
+        }
+
+        resolveOverlap() {
+            const maxW = canvas.clientWidth || 700;
+            const maxH = canvas.clientHeight || 500;
+            const safeMargin = 40;
+            const maxAttempts = 40;
+
+            if (!maxW || !maxH) return;
+
+            let attempts = 0;
+
+            const getRect = () => {
+                const w = this.element.offsetWidth || 0;
+                const h = this.element.offsetHeight || 0;
+                return { w, h };
+            };
+
+            while (attempts < maxAttempts) {
+                const { w, h } = getRect();
+                let overlap = false;
+
+                for (const other of floaters) {
+                    if (!other || !other.element || !other.element.isConnected || other === this) continue;
+
+                    const ow = other.element.offsetWidth || 0;
+                    const oh = other.element.offsetHeight || 0;
+
+                    if (ow === 0 || oh === 0 || w === 0 || h === 0) continue;
+
+                    const noOverlap =
+                        this.x + w < other.x ||
+                        this.x > other.x + ow ||
+                        this.y + h < other.y ||
+                        this.y > other.y + oh;
+
+                    if (!noOverlap) {
+                        overlap = true;
+                        break;
+                    }
+                }
+
+                if (!overlap) break;
+
+                this.x = safeMargin + Math.random() * Math.max(10, (maxW - 2 * safeMargin));
+                this.y = safeMargin + Math.random() * Math.max(10, (maxH - 2 * safeMargin));
+                attempts++;
+            }
+
+            this.element.style.left = `${this.x}px`;
+            this.element.style.top = `${this.y}px`;
+        }
+
+        // 移动时的“互相躲开一点”逻辑
+        avoidOverlapWhileMoving() {
+            const w = this.element.offsetWidth || 0;
+            const h = this.element.offsetHeight || 0;
+            if (!w || !h) return;
+
+            const cx = this.x + w / 2;
+            const cy = this.y + h / 2;
+
+            const pushStrength = 0.8;   // 每帧轻轻推一点就好
+            const maxPushes = 6;        // 限制次数，避免抖成一团
+            let pushes = 0;
+
+            for (const other of floaters) {
+                if (other === this || !other.element || !other.element.isConnected) continue;
+
+                const ow = other.element.offsetWidth || 0;
+                const oh = other.element.offsetHeight || 0;
+                if (!ow || !oh) continue;
+
+                const ocx = other.x + ow / 2;
+                const ocy = other.y + oh / 2;
+
+                // 先判定矩形是否重叠
+                const overlapX = Math.abs(cx - ocx) < (w + ow) / 2;
+                const overlapY = Math.abs(cy - ocy) < (h + oh) / 2;
+
+                if (overlapX && overlapY) {
+                    // 两个中心的方向向量
+                    let dx = cx - ocx;
+                    let dy = cy - ocy;
+                    if (dx === 0 && dy === 0) {
+                        dx = (Math.random() - 0.5) || 0.1;
+                        dy = (Math.random() - 0.5) || 0.1;
+                    }
+                    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+
+                    // 往反方向推一点
+                    this.x += nx * pushStrength;
+                    this.y += ny * pushStrength;
+
+                    pushes++;
+                    if (pushes >= maxPushes) break;
+                }
+            }
+        }
+
+        applyRandomStyle() {
+            this.element.style.fontFamily = fontFamilies[Math.floor(Math.random() * fontFamilies.length)];
+            const size = Math.floor(Math.random() * 120) + 30;
             this.element.style.fontSize = `${size}px`;
-            return;
+
+            // === Mobile: 简化版 ===
+            if (isMobile) {
+                const color = randomColor();
+                this.element.style.cssText = `
+                    font-family: ${this.element.style.fontFamily};
+                    font-size: ${size}px;
+                    position: absolute;
+                    white-space: nowrap;
+                    cursor: grab;
+                    z-index: 10;
+                    opacity: 1;
+                    display: inline-block;
+                    padding: 12px 16px;
+                    line-height: 1.4;
+                    left: ${this.x}px;
+                    top: ${this.y}px;
+                    color: ${color};
+                    -webkit-font-smoothing: antialiased;
+                    text-rendering: optimizeLegibility;
+                    will-change: left, top;
+                `;
+                this.element.style.transform = 'none';
+                this.element.style.textShadow = 'none';
+                this.element.style.webkitTextStroke = '0';
+                return;
+            }
+
+            // === Desktop: 疯批字效全集 ===
+            this.element.style.cssText = `
+                font-family: ${this.element.style.fontFamily};
+                font-size: ${size}px;
+                position: absolute;
+                white-space: nowrap;
+                cursor: grab;
+                z-index: 10;
+                opacity: 1;
+                display: inline-block;
+                will-change: transform, left, top;
+                -webkit-font-smoothing: none;
+                text-rendering: geometricPrecision;
+                padding: 20px;
+                line-height: 1.5;
+                transition: font-size 0.3s, color 0.3s, text-shadow 0.3s;
+                left: ${this.x}px;
+                top: ${this.y}px;
+            `;
+
+            this.element.style.textShadow = 'none';
+            this.element.style.webkitTextStroke = '0';
+            this.element.style.fontWeight = '900';
+
+            const styleType = Math.floor(Math.random() * 10);
+            const color1 = randomColor();
+            const color2 = randomColor();
+
+            let transformCSS = "";
+
+            if (styleType === 0) {
+                this.element.style.color = "#ffffff";
+                this.element.style.webkitTextStroke = "2px #000000";
+                this.element.style.textShadow = `4px 4px 0 ${color1}, 8px 8px 0 ${color2}`;
+            }
+            else if (styleType === 1) {
+                this.element.style.color = color1;
+                this.element.style.textShadow =
+                    "1px 1px 0 #000, 2px 2px 0 #000, 3px 3px 0 #000, 4px 4px 0 #000, 5px 5px 0 " + color2;
+                transformCSS += " skew(-10deg)";
+            }
+            else if (styleType === 2) {
+                this.element.style.color = color1;
+                this.element.style.webkitTextStroke = "4px #000000";
+                this.element.style.paintOrder = "stroke fill";
+            }
+            else if (styleType === 3) {
+                this.element.style.color = "#00ff00";
+                this.element.style.textShadow = "-3px 0 red, 3px 0 blue";
+                this.element.style.fontFamily = '"Courier New', 'monospace";
+            }
+            else if (styleType === 4) {
+                this.element.style.color = color1;
+                const scaleX = 0.6 + Math.random() * 1.2;
+                const scaleY = 0.6 + Math.random() * 0.8;
+                const skew = Math.random() * 40 - 20;
+                transformCSS += ` scale(${scaleX}, ${scaleY}) skew(${skew}deg)`;
+                if (Math.random() > 0.5) this.element.style.webkitTextStroke = "1px #000000";
+            }
+            else if (styleType === 5) {
+                this.element.style.color = color1;
+                let scaleX, scaleY;
+                if (Math.random() > 0.5) {
+                    scaleX = 1.8 + Math.random() * 1.2;
+                    scaleY = 0.5 + Math.random() * 0.2;
+                } else {
+                    scaleX = 0.4 + Math.random() * 0.3;
+                    scaleY = 1.8 + Math.random() * 1.2;
+                }
+                transformCSS += ` scale(${scaleX.toFixed(2)}, ${scaleY.toFixed(2)})`;
+                if (Math.random() > 0.5) this.element.style.webkitTextStroke = "1px #000000";
+            }
+            else if (styleType === 6) {
+                // 光晕减弱版霓虹
+                this.element.style.color = color1;
+                this.element.style.textShadow =
+                    `0 0 3px ${color1},
+                     0 0 6px ${color1},
+                     0 0 10px ${color2}`;
+            }
+            else if (styleType === 7) {
+                this.element.style.color = "#ffffff";
+                this.element.style.webkitTextStroke = "2px #000000";
+                this.element.style.textShadow =
+                    "2px 2px 0 " + color1 + "," +
+                    "4px 4px 0 " + color1 + "," +
+                    "6px 6px 0 " + color1 + "," +
+                    "8px 8px 0 " + color2;
+            }
+            else if (styleType === 8) {
+                this.element.style.color = color1;
+                this.element.style.textShadow =
+                    "-2px -1px 0 #000, 2px 1px 0 #000, 1px -2px 0 #000, -1px 2px 0 #000";
+                const skewX = (Math.random() * 10 - 5).toFixed(1);
+                const skewY = (Math.random() * 10 - 5).toFixed(1);
+                transformCSS += ` skew(${skewX}deg, ${skewY}deg)`;
+            }
+            else {
+                this.element.style.color = "#ffeb3b";
+                this.element.style.textShadow =
+                    "4px 0 0 #ff00ff, 8px 0 0 #ff00ff, 12px 0 0 #ff00ff, 16px 0 0 #ff00ff";
+                const skew = (Math.random() * 20 + 10).toFixed(1);
+                transformCSS += ` skewX(${skew}deg)`;
+            }
+
+            if (!transformCSS.includes("rotate")) {
+                const rotate = Math.floor(Math.random() * 60) - 30;
+                transformCSS += ` rotate(${rotate}deg)`;
+            }
+
+            this.element.style.transform = transformCSS;
         }
+            
+        update() {
+            const maxW = canvas.clientWidth || 700;
+            const maxH = canvas.clientHeight || 500;
+            const margin = 10;
+            const w = this.element.offsetWidth || 0;
+            const h = this.element.offsetHeight || 0;
 
-        const styleType = Math.floor(Math.random() * 8);
-        if (styleType === 0) this.element.style.textShadow = "2px 2px 0 #000, 4px 4px 0 #000";
-        if (styleType === 1) this.element.style.textShadow = `0 0 4px ${color}`;
-        if (styleType === 2) this.element.style.textShadow = `0 0 6px ${color}, 0 0 12px ${color}`;
-        if (styleType === 3) this.element.style.webkitTextStroke = "2px black";
-        if (styleType === 4) this.element.style.transform = "skew(-10deg)";
-        if (styleType === 5) this.element.style.transform = "rotate(8deg)";
-        if (styleType === 6) this.element.style.transform = "rotate(-8deg)";
-        if (styleType === 7) this.element.style.textShadow = `3px 3px 0 ${color}`;
+            // 位置更新
+            this.x += this.vx;
+            this.y += this.vy;
 
-        this.element.style.fontSize = `${size}px`;
-        this.element.style.color = color;
+            // 轻微随机扰动方向
+            if (Math.random() < 0.02) {
+                this.vx += (Math.random() - 0.5) * 0.1;
+                this.vy += (Math.random() - 0.5) * 0.1;
+            }
+
+            // 控制速度区间
+            let speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+            if (speed < MIN_SPEED) {
+                const angle = Math.random() * Math.PI * 2;
+                this.vx = Math.cos(angle) * BASE_SPEED;
+                this.vy = Math.sin(angle) * BASE_SPEED;
+                speed = BASE_SPEED;
+            } else if (speed > MAX_SPEED) {
+                const scale = MAX_SPEED / speed;
+                this.vx *= scale;
+                this.vy *= scale;
+            }
+
+            // 撞边反弹 + clamp，保证不出画布
+            if (w > 0 && h > 0) {
+                const maxX = Math.max(margin, maxW - w - margin);
+                const maxY = Math.max(margin, maxH - h - margin);
+
+                if (this.x <= margin || this.x >= maxX) {
+                    this.vx = -this.vx;
+                    this.x = Math.min(Math.max(this.x, margin), maxX);
+                }
+                if (this.y <= margin || this.y >= maxY) {
+                    this.vy = -this.vy;
+                    this.y = Math.min(Math.max(this.y, margin), maxY);
+                }
+            }
+
+            // 和其他字块做轻微排斥，减少交叠遮挡
+            this.avoidOverlapWhileMoving();
+            // 再次 clamp 一遍，防止排斥后把自己推出画布
+            this.ensureInBounds();
+
+            this.element.style.left = `${this.x}px`; 
+            this.element.style.top = `${this.y}px`;
+        }
     }
 
-    ensureInBounds() {
-        const w = this.element.offsetWidth, h = this.element.offsetHeight;
-        const maxX = canvas.clientWidth - w - 10;
-        const maxY = canvas.clientHeight - h - 10;
-        this.x = Math.max(10, Math.min(this.x, maxX));
-        this.y = Math.max(10, Math.min(this.y, maxY));
-        this.element.style.left = `${this.x}px`;
-        this.element.style.top = `${this.y}px`;
+    function spawnSentence() {
+        const text = textInput.value.trim();
+        if (!text) return;
+        const words = text.includes(' ') ? text.split(/\\s+/) : text.split('');
+        words.forEach(w => {
+            const f = new Floater(w);
+            floaters.push(f);
+        });
+        textInput.value = '';
     }
 
-    update() {
-        this.x += this.vx; this.y += this.vy;
+    function restyleAll() { floaters.forEach(f => f.applyRandomStyle()); }
+    function clearCanvas() { floaters = []; canvas.innerHTML = ''; }
 
-        const w = this.element.offsetWidth, h = this.element.offsetHeight;
-        const maxX = canvas.clientWidth - w - 10;
-        const maxY = canvas.clientHeight - h - 10;
-
-        if (this.x <= 10 || this.x >= maxX) this.vx = -this.vx;
-        if (this.y <= 10 || this.y >= maxY) this.vy = -this.vy;
-
-        let speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-        if (speed < MIN_SPEED) {
-            const a = Math.random()*Math.PI*2;
-            this.vx = Math.cos(a) * BASE_SPEED;
-            this.vy = Math.sin(a) * BASE_SPEED;
-        }
-        if (speed > MAX_SPEED) {
-            this.vx *= 0.98; this.vy *= 0.98;
-        }
-
-        this.ensureInBounds();
+    let rainbowClickCount = 0;
+    function setHighSatRainbow() {
+        const gradient = rainbowClickCount === 0 ? highSatGradients[0] : highSatGradients[Math.floor(Math.random() * highSatGradients.length)];
+        rainbowClickCount++;
+        canvas.style.background = gradient;
+        canvas.style.backgroundSize = "cover";
     }
-}
 
-function spawnSentence() {
-    const text = textInput.value.trim();
-    if (!text) return;
-    const arr = text.includes(" ") ? text.split(/\s+/) : text.split('');
-    arr.forEach(w => floaters.push(new Floater(w)));
-    textInput.value = '';
-}
+    function setBg(type) {
+        if (type === 'white') canvas.style.background = '#ffffff';
+        else if (type === 'win98') canvas.style.background = '#008080';
+        else if (type === 'bliss') canvas.style.background = `url('${blissData}') center/cover no-repeat`;
+    }
 
-function restyleAll() { floaters.forEach(f => f.applyStyle()); }
-function clearCanvas() { floaters = []; canvas.innerHTML = ''; }
-
-function setHighSatRainbow() {
-    canvas.style.background = "linear-gradient(120deg, red, yellow, green, cyan, blue, violet)";
-}
-function setBg(type) {
-    if (type === 'white') canvas.style.background = '#fff';
-    if (type === 'win98') canvas.style.background = '#008080';
-    if (type === 'bliss') canvas.style.background = `url(${blissData}) center/cover no-repeat`;
-}
-
-document.getElementById('file-input').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const r = new FileReader();
-    r.onload = (evt) => canvas.style.background = `url(${evt.target.result}) center/cover no-repeat`;
-    r.readAsDataURL(file);
-});
-
-function exportMeme() {
-    html2canvas(canvas, { scale: 2 }).then(c => {
-        const a = document.createElement('a');
-        a.download = 'passion-meme.png';
-        a.href = c.toDataURL('image/png');
-        a.click();
+    document.getElementById('file-input').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (evt) => canvas.style.background = `url(${evt.target.result}) center/cover no-repeat`;
+            reader.readAsDataURL(file);
+        }
+        e.target.value = ''; 
     });
-}
 
-function animate() { floaters.forEach(f => f.update()); requestAnimationFrame(animate); }
-window.onload = () => { setBg('bliss'); animate(); };
-textInput.addEventListener('keypress', (e) => e.key === 'Enter' && spawnSentence());
+    function exportMeme() {
+        const originalRadius = canvas.style.borderRadius;
+        const originalShadow = canvas.style.boxShadow;
+        const originalBorder = canvas.style.border;
+        canvas.style.borderRadius = '0'; canvas.style.boxShadow = 'none'; canvas.style.border = 'none';
+        html2canvas(canvas, { scale: 2 }).then(capturedCanvas => {
+            const link = document.createElement('a'); 
+            link.download = 'passion-meme.png'; 
+            link.href = capturedCanvas.toDataURL('image/png'); 
+            link.click();
+            canvas.style.borderRadius = originalRadius; 
+            canvas.style.boxShadow = originalShadow; 
+            canvas.style.border = originalBorder;
+        });
+    }
+
+    function animate() { floaters.forEach(f => f.update()); requestAnimationFrame(animate); }
+
+    window.onload = () => { 
+        setBg('bliss');
+        setTimeout(spawnSentence, 500); 
+        animate(); 
+    };
+    textInput.addEventListener('keypress', (e) => e.key === 'Enter' && spawnSentence());
 </script>
 
 </body>
 </html>
 """
 
-# === 修复关键 BUG：给 Bliss URL 自动加引号 ===
-html_code = html_code.replace("__BLISS_URL__", f'"{final_bliss_url}"')
+# 把占位符替换成真实的 Bliss URL
+html_code = html_code.replace("__BLISS__", final_bliss_url)
 
 components.html(html_code, height=1000, scrolling=True)
