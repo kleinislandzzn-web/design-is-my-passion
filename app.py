@@ -77,13 +77,27 @@ html_code = f"""
             opacity: 0.25; pointer-events: none; z-index: 5; mix-blend-mode: overlay;
         }}
 
-        /* === 漂浮文字 === */
+        /* === 漂浮文字 (核心修改区) === */
         .floater {{
-            position: absolute; white-space: nowrap; cursor: grab; font-weight: 900; line-height: 1;
-            z-index: 10; opacity: 1; 
+            position: absolute; 
+            white-space: nowrap; 
+            cursor: grab; 
+            font-weight: 900; 
+            line-height: 1;
+            z-index: 10; 
+            opacity: 1; 
+            
+            /* 关键修复 1: 强制把元素变为块级容器，确保背景色能被正确渲染 */
+            display: inline-block;
+            
+            /* 关键修复 2: 强制 GPU 加速，防止移动时背景消失 */
+            will-change: transform, left, top;
+            
+            /* 保持锯齿感 */
             -webkit-font-smoothing: none;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: geometricPrecision;
+            
             transition: font-size 0.3s, color 0.3s, text-shadow 0.3s;
         }}
 
@@ -104,7 +118,7 @@ html_code = f"""
         .panel-label {{ font-size: 12px; margin-bottom: 5px; color: #333; text-transform: uppercase; }}
         #file-input {{ position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0;}}
 
-        /* === 底部版权声明 (新增) === */
+        /* === 底部版权声明 === */
         .footer-text {{
             margin-top: 20px;
             font-family: 'Courier New', Courier, monospace;
@@ -209,11 +223,14 @@ html_code = f"""
                 const size = Math.floor(Math.random() * 120) + 30;
                 this.element.style.fontSize = `${{size}}px`;
 
+                // 重置所有可能影响的样式
                 this.element.style.color = "";
                 this.element.style.webkitTextStroke = "";
                 this.element.style.textShadow = "";
                 this.element.style.backgroundImage = "";
                 this.element.style.backgroundColor = "transparent";
+                this.element.style.webkitBackgroundClip = "";
+                this.element.style.webkitTextFillColor = "";
                 this.element.style.fontStyle = "normal";
                 this.element.style.padding = "0";
                 this.element.style.transform = ""; 
@@ -225,12 +242,14 @@ html_code = f"""
                 let transformCSS = "";
 
                 if (styleType === 0) {{
+                    // Style 0: 叠叠乐
                     this.element.style.color = "#fff";
                     this.element.style.webkitTextStroke = "2px black";
                     this.element.style.textShadow = `4px 4px 0 ${{color1}}, 8px 8px 0 ${{color2}}`;
                     this.element.style.fontWeight = "900";
                 }} 
                 else if (styleType === 1) {{
+                     // Style 1: 渐变流体 (需要 display: inline-block 才能在浮动时显示背景)
                     const angle = Math.floor(Math.random() * 360);
                     this.element.style.backgroundImage = `linear-gradient(${{angle}}deg, ${{color1}}, ${{color2}}, ${{randomColor()}})`;
                     this.element.style.webkitBackgroundClip = 'text';
@@ -238,16 +257,19 @@ html_code = f"""
                     transformCSS += ` skew(${{Math.random()*30-15}}deg)`; 
                 }} 
                 else if (styleType === 2) {{
+                    // Style 2: 大描边
                     this.element.style.color = color1;
                     this.element.style.webkitTextStroke = `4px black`; 
                     this.element.style.paintOrder = "stroke fill"; 
                 }} 
                 else if (styleType === 3) {{
+                    // Style 3: 故障风
                     this.element.style.color = "#00ff00"; 
                     this.element.style.textShadow = `-3px 0 red, 3px 0 blue`;
                     this.element.style.fontFamily = '"Courier New", monospace';
                 }} 
                 else if (styleType === 4) {{
+                     // Style 4: 轻度变形
                      this.element.style.color = color1;
                      const scaleX = 0.6 + Math.random() * 1.2; 
                      const scaleY = 0.6 + Math.random() * 0.8; 
@@ -256,6 +278,7 @@ html_code = f"""
                      if (Math.random()>0.5) this.element.style.webkitTextStroke = "1px black";
                 }}
                 else {{
+                    // Style 5: 色块背景
                     this.element.style.color = "white";
                     this.element.style.backgroundColor = color1;
                     this.element.style.padding = "2px 10px";
