@@ -122,10 +122,9 @@ html_code = """
                 width: 100%;
                 max-width: 100%;
                 border-radius: 24px / 8px;
-                filter: none; /* 移动端关闭对比/亮度滤镜，减少闪烁 */
+                filter: none;
             }
 
-            /* 关掉 CRT 噪点遮罩 */
             #meme-canvas::after {
                 opacity: 0;
                 background-image: none;
@@ -157,7 +156,6 @@ html_code = """
                 padding: 8px 10px;
             }
 
-            /* 移动端降低文字特效以防闪屏 */
             .floater {
                 -webkit-font-smoothing: antialiased;
                 text-rendering: optimizeLegibility;
@@ -202,8 +200,8 @@ html_code = """
     const canvas = document.getElementById('meme-canvas');
     const textInput = document.getElementById('textInput');
     const blissData = "__BLISS__";
-    const BASE_SPEED = 0.4;                 // 局部轻微浮动速度
-    const MAX_OFFSET = 25;                  // 距离初始位置最多偏移多少像素
+    const BASE_SPEED = 0.4;      // 局部轻微浮动
+    const MAX_OFFSET = 25;       // 离锚点最大偏移
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
     let floaters = [];
 
@@ -237,11 +235,9 @@ html_code = """
             this.x = safeMargin + Math.random() * Math.max(10, (maxW - 2 * safeMargin));
             this.y = safeMargin + Math.random() * Math.max(10, (maxH - 2 * safeMargin));
 
-            // 记录“锚点位置”，后面只在周围抖动
             this.baseX = this.x;
             this.baseY = this.y;
 
-            // 速度很小，只做局部晃动
             this.vx = (Math.random() - 0.5) * BASE_SPEED;
             this.vy = (Math.random() - 0.5) * BASE_SPEED;
 
@@ -249,7 +245,33 @@ html_code = """
             this.element.addEventListener('click', (e) => { e.stopPropagation(); this.element.remove(); });
             canvas.appendChild(this.element);
 
-            this.resolveOverlap();  // 初始尽量不重叠
+            this.resolveOverlap();     // 先避免和已有文字重叠
+            this.ensureInBounds(true); // 再强制放进画布，并重新设锚点
+        }
+
+        ensureInBounds(resetBase = false) {
+            const maxW = canvas.clientWidth || 700;
+            const maxH = canvas.clientHeight || 500;
+            const margin = 10;
+
+            const w = this.element.offsetWidth || 0;
+            const h = this.element.offsetHeight || 0;
+
+            if (!w || !h) return;
+
+            const maxX = Math.max(margin, maxW - w - margin);
+            const maxY = Math.max(margin, maxH - h - margin);
+
+            this.x = Math.min(Math.max(this.x, margin), maxX);
+            this.y = Math.min(Math.max(this.y, margin), maxY);
+
+            if (resetBase) {
+                this.baseX = this.x;
+                this.baseY = this.y;
+            }
+
+            this.element.style.left = `${this.x}px`;
+            this.element.style.top = `${this.y}px`;
         }
 
         resolveOverlap() {
@@ -273,7 +295,7 @@ html_code = """
                 let overlap = false;
 
                 for (const other of floaters) {
-                    if (!other || !other.element || !other.element.isConnected) continue;
+                    if (!other || !other.element || !other.element.isConnected || other === this) continue;
 
                     const ow = other.element.offsetWidth || 0;
                     const oh = other.element.offsetHeight || 0;
@@ -296,8 +318,6 @@ html_code = """
 
                 this.x = safeMargin + Math.random() * Math.max(10, (maxW - 2 * safeMargin));
                 this.y = safeMargin + Math.random() * Math.max(10, (maxH - 2 * safeMargin));
-                this.baseX = this.x;
-                this.baseY = this.y;
                 attempts++;
             }
 
@@ -310,7 +330,7 @@ html_code = """
             const size = Math.floor(Math.random() * 120) + 30;
             this.element.style.fontSize = `${size}px`;
 
-            // === Mobile: 简化版，保留彩色但去掉阴影和变形，减少闪烁 ===
+            // === Mobile: 简化版 ===
             if (isMobile) {
                 const color = randomColor();
                 this.element.style.cssText = `
@@ -337,7 +357,7 @@ html_code = """
                 return;
             }
 
-            // === Desktop: 疯批特效全集 ===
+            // === Desktop: 疯批字效全集 ===
             this.element.style.cssText = `
                 font-family: ${this.element.style.fontFamily};
                 font-size: ${size}px;
@@ -361,39 +381,34 @@ html_code = """
             this.element.style.webkitTextStroke = '0';
             this.element.style.fontWeight = '900';
 
-            const styleType = Math.floor(Math.random() * 10);  // 0 ~ 9
+            const styleType = Math.floor(Math.random() * 10);
             const color1 = randomColor();
             const color2 = randomColor();
 
             let transformCSS = "";
 
             if (styleType === 0) {
-                // 叠叠乐描边
                 this.element.style.color = "#ffffff";
                 this.element.style.webkitTextStroke = "2px #000000";
                 this.element.style.textShadow = `4px 4px 0 ${color1}, 8px 8px 0 ${color2}`;
             }
             else if (styleType === 1) {
-                // 3D Retro 斜切
                 this.element.style.color = color1;
                 this.element.style.textShadow =
                     "1px 1px 0 #000, 2px 2px 0 #000, 3px 3px 0 #000, 4px 4px 0 #000, 5px 5px 0 " + color2;
                 transformCSS += " skew(-10deg)";
             }
             else if (styleType === 2) {
-                // 粗描边 + 实心
                 this.element.style.color = color1;
                 this.element.style.webkitTextStroke = "4px #000000";
                 this.element.style.paintOrder = "stroke fill";
             }
             else if (styleType === 3) {
-                // 故障风 RGB 偏移
                 this.element.style.color = "#00ff00";
                 this.element.style.textShadow = "-3px 0 red, 3px 0 blue";
                 this.element.style.fontFamily = '"Courier New", monospace';
             }
             else if (styleType === 4) {
-                // 轻度变形
                 this.element.style.color = color1;
                 const scaleX = 0.6 + Math.random() * 1.2;
                 const scaleY = 0.6 + Math.random() * 0.8;
@@ -402,7 +417,6 @@ html_code = """
                 if (Math.random() > 0.5) this.element.style.webkitTextStroke = "1px #000000";
             }
             else if (styleType === 5) {
-                // 极限拉伸
                 this.element.style.color = color1;
                 let scaleX, scaleY;
                 if (Math.random() > 0.5) {
@@ -416,7 +430,6 @@ html_code = """
                 if (Math.random() > 0.5) this.element.style.webkitTextStroke = "1px #000000";
             }
             else if (styleType === 6) {
-                // 霓虹发光
                 this.element.style.color = color1;
                 this.element.style.textShadow =
                     `0 0 6px ${color1},
@@ -425,7 +438,6 @@ html_code = """
                      0 0 40px ${color2}`;
             }
             else if (styleType === 7) {
-                // 立体堆叠
                 this.element.style.color = "#ffffff";
                 this.element.style.webkitTextStroke = "2px #000000";
                 this.element.style.textShadow =
@@ -435,7 +447,6 @@ html_code = """
                     "8px 8px 0 " + color2;
             }
             else if (styleType === 8) {
-                // 抖动毛刺边缘
                 this.element.style.color = color1;
                 this.element.style.textShadow =
                     "-2px -1px 0 #000, 2px 1px 0 #000, 1px -2px 0 #000, -1px 2px 0 #000";
@@ -444,7 +455,6 @@ html_code = """
                 transformCSS += ` skew(${skewX}deg, ${skewY}deg)`;
             }
             else {
-                // 运动拖尾 / 拉伸
                 this.element.style.color = "#ffeb3b";
                 this.element.style.textShadow =
                     "4px 0 0 #ff00ff, 8px 0 0 #ff00ff, 12px 0 0 #ff00ff, 16px 0 0 #ff00ff";
@@ -452,7 +462,6 @@ html_code = """
                 transformCSS += ` skewX(${skew}deg)`;
             }
 
-            // 统一加一点随机旋转
             if (!transformCSS.includes("rotate")) {
                 const rotate = Math.floor(Math.random() * 60) - 30;
                 transformCSS += ` rotate(${rotate}deg)`;
@@ -462,7 +471,6 @@ html_code = """
         }
             
         update() {
-            // 只在 baseX/baseY 周围小范围抖动
             this.x += this.vx;
             this.y += this.vy;
 
@@ -471,18 +479,19 @@ html_code = """
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist > MAX_OFFSET) {
-                const factor = MAX_OFFSET / dist;
+                const factor = MAX_OFFSET / (dist || 1);
                 this.x = this.baseX + dx * factor;
                 this.y = this.baseY + dy * factor;
                 this.vx = -this.vx;
                 this.vy = -this.vy;
             }
 
-            // 偶尔给一点随机扰动，避免卡死在一条直线
             if (Math.random() < 0.01) {
                 this.vx += (Math.random() - 0.5) * 0.1;
                 this.vy += (Math.random() - 0.5) * 0.1;
             }
+
+            this.ensureInBounds(false);
 
             this.element.style.left = `${this.x}px`; 
             this.element.style.top = `${this.y}px`;
@@ -493,7 +502,12 @@ html_code = """
         const text = textInput.value.trim();
         if (!text) return;
         const words = text.includes(' ') ? text.split(/\\s+/) : text.split('');
-        words.forEach(w => floaters.push(new Floater(w)));
+        const created = [];
+        words.forEach(w => {
+            const f = new Floater(w);
+            created.push(f);
+            floaters.push(f);
+        });
         textInput.value = '';
     }
 
