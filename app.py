@@ -119,7 +119,7 @@ html_code = f"""
         <div>
             <div class="panel-label">Text Generator</div>
             <div class="control-row">
-                <input type="text" id="textInput" placeholder="输入文字..." value="Design is My Passion !!!">
+                <input type="text" id="textInput" placeholder="Type your passion..." value="Design is My Passion !!!">
                 <button class="retro-btn" style="flex:0.5;" onclick="spawnSentence()">ADD TEXT</button>
                 <button class="retro-btn action" style="flex:0.5;" onclick="restyleAll()">🔀 RE-STYLE</button>
                 <button class="retro-btn danger" style="flex:0.3;" onclick="clearCanvas()">🗑️</button>
@@ -182,77 +182,12 @@ html_code = f"""
                 this.element.innerText = text;
                 
                 this.applyRandomStyle();
-                
                 this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
                 canvas.appendChild(this.element);
 
-                // === 新增：防重叠逻辑 (Collision Avoidance) ===
-                const safeMargin = 50; 
-                const maxAttempts = 50; // 最大尝试次数
-                let bestX = 0, bestY = 0;
-                let collision = true;
-
-                for (let i = 0; i < maxAttempts; i++) {{
-                    // 随机生成位置 (考虑元素本身的宽高)
-                    // 注意：offsetWidth 在 appendChild 之后才有值
-                    const elW = this.element.offsetWidth;
-                    const elH = this.element.offsetHeight;
-                    const maxW = canvas.clientWidth - elW - safeMargin;
-                    const maxH = canvas.clientHeight - elH - safeMargin;
-                    
-                    // 确保不会生成在负坐标
-                    const randX = safeMargin + Math.random() * Math.max(0, maxW - safeMargin);
-                    const randY = safeMargin + Math.random() * Math.max(0, maxH - safeMargin);
-
-                    // 临时更新位置以进行检测
-                    // 这里我们只计算数值，不直接修改 DOM，减少重绘，直到确定最终位置
-                    // 但为了 checkCollision 需要 DOM 矩形，我们手动计算矩形
-                    
-                    const myRect = {{
-                        left: randX,
-                        top: randY,
-                        right: randX + elW,
-                        bottom: randY + elH
-                    }};
-
-                    let overlapFound = false;
-                    // 遍历现有的 floaters 检查碰撞
-                    for (const other of floaters) {{
-                        const otherRect = other.element.getBoundingClientRect();
-                        // getBoundingClientRect 是相对于视口的，我们需要相对于画布的坐标？
-                        // 不，只要都用相对坐标对比即可。
-                        // 简单起见，我们用 floaters 对象里的 x, y 属性 (它们是 relative to canvas)
-                        const otherW = other.element.offsetWidth;
-                        const otherH = other.element.offsetHeight;
-                        const otherL = other.x;
-                        const otherT = other.y;
-                        const otherR = otherL + otherW;
-                        const otherB = otherT + otherH;
-
-                        // AABB 碰撞检测
-                        if (!(myRect.right < otherL || 
-                              myRect.left > otherR || 
-                              myRect.bottom < otherT || 
-                              myRect.top > otherB)) {{
-                            overlapFound = true;
-                            break; // 撞了，不用看其他的了，直接重试
-                        }}
-                    }}
-
-                    if (!overlapFound) {{
-                        bestX = randX;
-                        bestY = randY;
-                        collision = false;
-                        break; // 找到好位置了！
-                    }}
-                    
-                    // 如果最后一次尝试还是碰撞，就只好用最后一次的随机值
-                    bestX = randX;
-                    bestY = randY;
-                }}
-
-                this.x = bestX;
-                this.y = bestY;
+                const safeMargin = 100;
+                this.x = safeMargin + Math.random() * (canvas.clientWidth - 2 * safeMargin);
+                this.y = safeMargin + Math.random() * (canvas.clientHeight - 2 * safeMargin);
                 this.vx = (Math.random() - 0.5) * 2;
                 this.vy = (Math.random() - 0.5) * 2;
             }}
