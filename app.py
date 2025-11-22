@@ -75,24 +75,18 @@ html_code = f"""
             opacity: 0.25; pointer-events: none; z-index: 5; mix-blend-mode: overlay;
         }}
 
-        /* === 漂浮文字 (关键修复) === */
+        /* === 漂浮文字 === */
         .floater {{
             position: absolute; 
             white-space: nowrap; 
             cursor: grab; 
             font-weight: 900; 
-            
-            /* 修复裁切问题：增加内边距，让斜体字和阴影有显示空间 */
             padding: 20px; 
-            /* 修复裁切问题：增加行高 */
             line-height: 1.5; 
-            
             z-index: 10; 
             opacity: 1; 
-            
             display: inline-block;
             will-change: transform, left, top;
-            
             -webkit-font-smoothing: none;
             text-rendering: geometricPrecision;
             transition: font-size 0.3s, color 0.3s, text-shadow 0.3s;
@@ -191,7 +185,6 @@ html_code = f"""
                 this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
                 canvas.appendChild(this.element);
 
-                // 增大出生点的安全距离
                 const safeMargin = 100;
                 this.x = safeMargin + Math.random() * (canvas.clientWidth - 2 * safeMargin);
                 this.y = safeMargin + Math.random() * (canvas.clientHeight - 2 * safeMargin);
@@ -204,7 +197,6 @@ html_code = f"""
                 const size = Math.floor(Math.random() * 120) + 30;
                 this.element.style.fontSize = `${{size}}px`;
 
-                // 清除所有可能残留的样式
                 this.element.style.cssText = `
                     font-family: ${{this.element.style.fontFamily}};
                     font-size: ${{size}}px;
@@ -231,39 +223,32 @@ html_code = f"""
                 let transformCSS = "";
 
                 if (styleType === 0) {{
-                    // [Style 0: 叠叠乐] - 安全
+                    // Style 0: 叠叠乐
                     this.element.style.color = "#fff";
                     this.element.style.webkitTextStroke = "2px black";
                     this.element.style.textShadow = `4px 4px 0 ${{color1}}, 8px 8px 0 ${{color2}}`;
                     this.element.style.fontWeight = "900";
                 }} 
                 else if (styleType === 1) {{
-                     // [Style 1: 3D Retro / 复古立体] - 替换掉了不稳定的背景裁切
-                     // 使用实色 + 强烈的3D阴影，效果类似但渲染稳定
+                     // Style 1: 3D Retro
                     this.element.style.color = color1;
-                    this.element.style.textShadow = `
-                        1px 1px 0 #000,
-                        2px 2px 0 #000,
-                        3px 3px 0 #000,
-                        4px 4px 0 #000,
-                        5px 5px 0 ${{color2}}
-                    `;
-                    this.element.style.transform = "skew(-10deg)";
+                    this.element.style.textShadow = `1px 1px 0 #000, 2px 2px 0 #000, 3px 3px 0 #000, 4px 4px 0 #000, 5px 5px 0 ${{color2}}`;
+                    transformCSS += " skew(-10deg)";
                 }} 
                 else if (styleType === 2) {{
-                    // [Style 2: 大描边] - 安全
+                    // Style 2: 大描边
                     this.element.style.color = color1;
                     this.element.style.webkitTextStroke = `4px black`; 
                     this.element.style.paintOrder = "stroke fill"; 
                 }} 
                 else if (styleType === 3) {{
-                    // [Style 3: 故障风] - 安全
+                    // Style 3: 故障风
                     this.element.style.color = "#00ff00"; 
                     this.element.style.textShadow = `-3px 0 red, 3px 0 blue`;
                     this.element.style.fontFamily = '"Courier New", monospace';
                 }} 
                 else if (styleType === 4) {{
-                     // [Style 4: 轻度变形] - 安全
+                     // Style 4: 轻度变形 (Elastic)
                      this.element.style.color = color1;
                      const scaleX = 0.6 + Math.random() * 1.2; 
                      const scaleY = 0.6 + Math.random() * 0.8; 
@@ -272,14 +257,23 @@ html_code = f"""
                      if (Math.random()>0.5) this.element.style.webkitTextStroke = "1px black";
                 }}
                 else {{
-                    // [Style 5: 贴纸/标签] - 替换掉了不稳定的色块
-                    // 使用边框 + 背景色，非常稳
-                    this.element.style.color = "black";
-                    this.element.style.backgroundColor = color1;
-                    this.element.style.border = "3px solid black";
-                    this.element.style.borderRadius = "5px";
-                    this.element.style.fontWeight = "bold";
-                    transformCSS += ` rotate(${{Math.random()*40-20}}deg)`;
+                    // Style 5: NEW - 极限拉伸 (Extreme Stretch) - 替代了原来的色块背景
+                    // 要么极宽，要么极高
+                    this.element.style.color = color1;
+                    // 50%概率是宽的，50%是高的
+                    let scaleX, scaleY;
+                    if (Math.random() > 0.5) {{
+                        // 极宽 (Wide)
+                        scaleX = 1.5 + Math.random() * 1.5; // 1.5x ~ 3.0x
+                        scaleY = 0.6 + Math.random() * 0.2; // 稍微压扁
+                    }} else {{
+                        // 极高 (Tall)
+                        scaleX = 0.4 + Math.random() * 0.3; // 压窄
+                        scaleY = 1.5 + Math.random() * 1.5; // 1.5x ~ 3.0x
+                    }}
+                    transformCSS += ` scale(${{scaleX.toFixed(2)}}, ${{scaleY.toFixed(2)}})`;
+                    // 随机加个描边
+                    if (Math.random() > 0.5) this.element.style.webkitTextStroke = "1px black";
                 }}
 
                 if (!transformCSS.includes("rotate")) {{
