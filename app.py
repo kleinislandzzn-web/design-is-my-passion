@@ -5,7 +5,6 @@ import os
 
 # === 1. Python 后端：读取本地 bliss.jpeg ===
 def get_image_base64(file_path):
-    """读取本地图片并转换为 Base64 字符串，以便嵌入 HTML"""
     if os.path.exists(file_path):
         with open(file_path, "rb") as f:
             data = f.read()
@@ -13,17 +12,11 @@ def get_image_base64(file_path):
             return f"data:image/jpeg;base64,{encoded}"
     return None
 
-# 读取同级目录下的 bliss.jpeg
 local_bliss_url = get_image_base64("bliss.jpeg")
-
-# 备用链接
 fallback_url = "https://web.archive.org/web/20230206142820if_/https://upload.wikimedia.org/wikipedia/en/d/d2/Bliss_%28Windows_XP%29.png"
-
-# 最终使用的 Bliss 链接
 final_bliss_url = local_bliss_url if local_bliss_url else fallback_url
 
-
-# === 2. 页面基础设置 ===
+# === 2. 页面配置 ===
 st.set_page_config(
     page_title="What is design?",
     page_icon="📺",
@@ -31,7 +24,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 隐藏 Streamlit 原生 UI
 st.markdown("""
     <style>
         #MainMenu {visibility: hidden;}
@@ -74,9 +66,7 @@ html_code = f"""
             background-color: #ffffff; border-radius: 40px / 10px;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.5); overflow: hidden;
             border: 2px solid #000; 
-            /* 修改：删除了 transition 属性，背景切换瞬间完成，没有滑入动画 */
         }}
-        /* 噪点纹理 */
         #meme-canvas::after {{
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAUVBMVEWFhYWDg4N3d3dtbW17e3t1dXV0dHR4eHh2dnZ6enp8fHx5eXl9fX1xcXF/f39wcHBzc3Nvb29TU1NEREQtLS0lJSUgICAfHx8QEBAAAAAA/wAkAAAAPnRSTlMAAQIDBAUGBwgJCgsMDQ4PEBITFBUWFxgZGhscHR4fICEiIyQmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0Zom6gAAAEZSURBVEjHhZKHctwwDANFaaTYRZvb/v9fN0hA4g1cOa3tK9c4FkWRokRKCgE/hJ1I8d/Zt2r58wWza3eF4H92v2m+gU+R8X+w5874D2z9F0j8C53jX+h3/IWH+Bdu+S9c418YFv+FufkXlvErbPErXN9+hU9/hX3/Fa7XW2Q1r9HXeI2u1it0/b5Ctl9B1+9/IXsE7P25QnZfIftv0M1+hWz+C9k/obcI2T2Bt98gO39B71+QnZeo9r9A7xW62+9R+xX2vEDvF+jdY7XfINsH9H4F7X+D7L4h92s0998gO19R+/+g2z/o9gH9+4LevoD+O+j/B/R+h/2+Qp7vUPN3qNl+Q+3W8x37B6jdfL9jV1G+X1H8A4x9d6nQ8oafAAAAAElFTkSuQmCC");
@@ -88,10 +78,10 @@ html_code = f"""
             position: absolute; white-space: nowrap; cursor: grab; font-weight: 900; line-height: 1;
             z-index: 10; opacity: 1;
         }}
-        .floater.solid-text {{ animation: slowHue 10s infinite linear alternate; }}
-        @keyframes slowHue {{
+        /* 增加一个慢速变色动画，只对部分文字生效 */
+        @keyframes hueAnim {{
             0% {{ filter: hue-rotate(0deg); }}
-            100% {{ filter: hue-rotate(30deg); }}
+            100% {{ filter: hue-rotate(360deg); }}
         }}
 
         /* === 控制面板 === */
@@ -101,7 +91,6 @@ html_code = f"""
         }}
         .control-row {{ display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; align-items: center;}}
         
-        /* 修改：设置默认文案 */
         input[type="text"] {{ flex: 2; background: #fff; border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; padding: 8px; font-family: 'Courier New', monospace; font-weight: bold; outline: none; font-size: 18px; }}
         
         .retro-btn {{ background: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040; padding: 8px 15px; cursor: pointer; font-weight: bold; font-family: 'Courier New', monospace; font-size: 12px; color: black; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; flex:1; white-space: nowrap; height: 36px; box-sizing: border-box; }}
@@ -132,7 +121,7 @@ html_code = f"""
             <div class="panel-label">Background System</div>
             <div class="control-row">
                 <button class="retro-btn" onclick="setBg('white')">⬜ White</button>
-                <button class="retro-btn" onclick="setRealRainbow()">🌈 Rainbow</button>
+                <button class="retro-btn" onclick="setHighSatRainbow()">🌈 Rainbow</button>
                 <button class="retro-btn" onclick="setBg('win98')" style="background:#008080; color:white;">💻 Win98</button>
                 <button class="retro-btn" onclick="setBg('bliss')" style="background: linear-gradient(to bottom, #62c2fc, #ffffff); color:black;">🏞️ Bliss</button>
                 <button class="retro-btn">📂 Upload <input type="file" id="file-input" accept="image/*"></button>
@@ -148,22 +137,25 @@ html_code = f"""
         const textInput = document.getElementById('textInput');
         let floaters = [];
         const fontFamilies = ['"Comic Sans MS"', 'Impact', '"Times New Roman"', 'Arial Black', 'Papyrus', 'Courier New', 'Verdana', '"Brush Script MT"'];
-        
         const blissData = "{final_bliss_url}";
 
-        const rainbowGradients = [
-            "linear-gradient(180deg, #FF0000, #FF7F00, #FFFF00, #00FF00, #0000FF, #4B0082, #9400D3)",
-            "linear-gradient(45deg, #ff9a9e, #fad0c4, #fad0c4, #a18cd1, #fbc2eb)",
-            "linear-gradient(135deg, #667eea, #764ba2, #6B8DD6, #8E37D7)",
-            "linear-gradient(to right, #4facfe, #00f2fe, #43e97b, #38f9d7)",
-            "linear-gradient(to bottom, #fa709a, #fee140, #ff9a9e, #fecfef)",
-            "linear-gradient(120deg, #d4fc79 0%, #96e6a1 100%)",
-            "linear-gradient(to right, #eea2a2 0%, #bbc1bf 19%, #57c6e1 42%, #b49fda 79%, #7ac5d8 100%)",
-            "linear-gradient(90deg, #00C9FF 0%, #92FE9D 100%)",
-            "linear-gradient(to top, #fbc2eb 0%, #a6c1ee 100%)",
-            "linear-gradient(to right, #ffecd2 0%, #fcb69f 100%)",
-            "linear-gradient(to right, #ff8177 0%, #ff867a 0%, #ff8c7f 21%, #f99185 52%, #cf556c 78%, #b12a5b 100%)"
+        // === 1. 纯高饱和渐变库 (High Saturation ONLY) ===
+        // 第一个是经典全彩虹，后续是各种高饱和撞色
+        const highSatGradients = [
+            "linear-gradient(180deg, #FF0000, #FF7F00, #FFFF00, #00FF00, #0000FF, #4B0082, #9400D3)", // 0: 经典全彩虹 (首发必中)
+            "linear-gradient(135deg, #FF0099, #493240)", // 赛博粉黑
+            "linear-gradient(90deg, #00F260, #0575E6)",  // 极光绿蓝
+            "linear-gradient(to right, #833ab4, #fd1d1d, #fcb045)", // Instagram 风格高饱和
+            "linear-gradient(to top, #00c6ff, #0072ff)", // 宝马蓝
+            "linear-gradient(45deg, #f12711, #f5af19)", // 火焰红黄
+            "linear-gradient(to bottom, #cc2b5e, #753a88)", // 紫红强对比
+            "linear-gradient(to right, #000000, #0f9b0f)", // 黑客帝国绿
+            "linear-gradient(120deg, #e65c00, #F9D423)", // 橘子汽水
+            "linear-gradient(to right, #DA22FF, #9733EE)", // 霓虹紫
+            "linear-gradient(to bottom, #FF416C, #FF4B2B)"  // 警示红
         ];
+
+        let rainbowClickCount = 0; // 计数器，用于判断是否第一次点击
 
         function randomColor() {{ return `hsl(${{Math.floor(Math.random() * 360)}}, 100%, 50%)`; }}
 
@@ -171,7 +163,6 @@ html_code = f"""
             text = text.trim();
             if (!text) return [];
             if (text.includes(' ')) return text.split(/\s+/).filter(w => w.length > 0);
-            
             if (window.Intl && Intl.Segmenter) {{
                 try {{
                     const segmenter = new Intl.Segmenter('zh-CN', {{ granularity: 'word' }});
@@ -190,33 +181,50 @@ html_code = f"""
                 const size = Math.floor(Math.random() * 60) + 40;
                 this.element.style.fontSize = `${{size}}px`;
                 
-                const isRainbow = Math.random() < 0.3;
-                if (isRainbow) {{
-                    this.element.classList.add('rainbow-text');
+                // === 2. 多样化字体设计 (4种随机风格) ===
+                const styleType = Math.floor(Math.random() * 4); 
+
+                if (styleType === 0) {{
+                    // Style 0: [实色投影风] 纯色 + 黑色描边 + 黑色硬投影
+                    this.element.style.color = randomColor();
+                    this.element.style.webkitTextStroke = "2px black";
+                    this.element.style.textShadow = "4px 4px 0px black";
+                }} 
+                else if (styleType === 1) {{
+                    // Style 1: [彩虹渐变风] 文字内部渐变 + 无描边
                     const angle = Math.floor(Math.random() * 360);
                     this.element.style.backgroundImage = `linear-gradient(${{angle}}deg, red, orange, yellow, green, blue, violet)`;
                     this.element.style.webkitBackgroundClip = 'text';
                     this.element.style.webkitTextFillColor = 'transparent';
-                    this.element.style.webkitTextStroke = 'none';
-                }} else {{
-                    this.element.classList.add('solid-text');
-                    const mainColor = randomColor();
-                    this.element.style.color = mainColor;
-                    if (Math.random() > 0.5) {{
-                        const strokeW = Math.floor(Math.random() * 4) + 2;
-                        this.element.style.webkitTextStroke = `${{strokeW}}px ${{randomColor()}}`;
-                    }} else {{ this.element.style.webkitTextStroke = 'none'; }}
-                    
-                    if (Math.random() > 0.5) {{
-                        const shadowColor = randomColor();
-                        this.element.style.textShadow = `3px 3px 0px ${{shadowColor}}`;
-                    }}
+                    // 渐变字一般加点倾斜更好看
+                    this.element.style.fontStyle = "italic";
+                }} 
+                else if (styleType === 2) {{
+                    // Style 2: [撞色描边风] 纯色填充 + 粗壮的彩色描边
+                    this.element.style.color = randomColor();
+                    const strokeColor = randomColor();
+                    this.element.style.webkitTextStroke = `3px ${{strokeColor}}`;
+                    // 稍微旋转
+                    this.element.style.transform = `rotate(${{Math.random()*20-10}}deg)`;
+                }} 
+                else {{
+                    // Style 3: [轻度变形风] 纯色 + 随机拉伸/压扁
+                    this.element.style.color = randomColor();
+                    // 偶尔加个发光效果
+                    this.element.style.textShadow = `0 0 5px ${{randomColor()}}`;
                 }}
+
+                // 通用变形逻辑 (叠加在特定风格之上)
+                // 只有非Style2(因为Style2已经定义了旋转)才随机旋转
+                let baseTransform = this.element.style.transform || "";
                 
-                const rotate = Math.floor(Math.random() * 60) - 30;
-                const scaleX = 0.8 + Math.random() * 0.5; 
-                const skewX = Math.floor(Math.random() * 20) - 10; 
-                this.element.style.transform = `rotate(${{rotate}}deg) scaleX(${{scaleX}}) skew(${{skewX}}deg)`;
+                // 随机 Skew (倾斜)
+                const skewX = Math.floor(Math.random() * 30) - 15;
+                // 随机 Scale (拉伸)
+                const scaleX = 0.7 + Math.random() * 0.6; // 0.7 ~ 1.3
+                
+                // 组合变换
+                this.element.style.transform = `${{baseTransform}} skew(${{skewX}}deg) scaleX(${{scaleX}})`;
 
                 this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
                 canvas.appendChild(this.element);
@@ -227,34 +235,18 @@ html_code = f"""
                 this.vy = (Math.random() - 0.5) * 1.5;
             }}
             
-            // === 修改：严格的边界碰撞检测 ===
             update() {{
                 const w = this.element.offsetWidth;
                 const h = this.element.offsetHeight;
                 const maxW = canvas.clientWidth;
                 const maxH = canvas.clientHeight;
+                this.x += this.vx; this.y += this.vy;
 
-                // 移动
-                this.x += this.vx; 
-                this.y += this.vy;
+                if (this.x <= 0) {{ this.vx = Math.abs(this.vx); this.x = 0; }} 
+                else if (this.x + w >= maxW) {{ this.vx = -Math.abs(this.vx); this.x = maxW - w; }}
 
-                // X轴碰撞：不仅反弹，还修正位置，防止出界
-                if (this.x <= 0) {{
-                    this.vx = Math.abs(this.vx); // 强制向右
-                    this.x = 0; // 强制拉回
-                }} else if (this.x + w >= maxW) {{
-                    this.vx = -Math.abs(this.vx); // 强制向左
-                    this.x = maxW - w; // 强制拉回
-                }}
-
-                // Y轴碰撞
-                if (this.y <= 0) {{
-                    this.vy = Math.abs(this.vy); // 强制向下
-                    this.y = 0;
-                }} else if (this.y + h >= maxH) {{
-                    this.vy = -Math.abs(this.vy); // 强制向上
-                    this.y = maxH - h;
-                }}
+                if (this.y <= 0) {{ this.vy = Math.abs(this.vy); this.y = 0; }} 
+                else if (this.y + h >= maxH) {{ this.vy = -Math.abs(this.vy); this.y = maxH - h; }}
 
                 this.element.style.left = `${{this.x}}px`; 
                 this.element.style.top = `${{this.y}}px`;
@@ -268,14 +260,20 @@ html_code = f"""
             textInput.value = '';
         }}
 
-        function clearCanvas() {{
-            floaters = []; 
-            canvas.innerHTML = ''; 
-        }}
+        function clearCanvas() {{ floaters = []; canvas.innerHTML = ''; }}
 
-        function setRealRainbow() {{
-            const randomGradient = rainbowGradients[Math.floor(Math.random() * rainbowGradients.length)];
-            canvas.style.background = randomGradient;
+        // === 3. 高饱和彩虹逻辑 ===
+        function setHighSatRainbow() {{
+            let gradient;
+            if (rainbowClickCount === 0) {{
+                // 第一次点击，强制使用索引 0 (全彩虹)
+                gradient = highSatGradients[0];
+            }} else {{
+                // 之后点击，从列表中随机选 (包含全彩虹)
+                gradient = highSatGradients[Math.floor(Math.random() * highSatGradients.length)];
+            }}
+            rainbowClickCount++;
+            canvas.style.background = gradient;
             canvas.style.backgroundSize = "cover";
         }}
 
@@ -308,10 +306,7 @@ html_code = f"""
         }}
 
         function animate() {{ floaters.forEach(f => f.update()); requestAnimationFrame(animate); }}
-        
-        // 修改：初始化时使用 input 的值生成
         window.onload = () => {{ setTimeout(spawnSentence, 500); animate(); }};
-        
         textInput.addEventListener('keypress', (e) => e.key === 'Enter' && spawnSentence());
 
     </script>
