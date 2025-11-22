@@ -5,24 +5,18 @@ import os
 
 # === 1. Python 后端：图片处理 ===
 def get_image_base64(file_path):
-    """读取本地图片并转为Base64，如果文件不存在返回None"""
     if os.path.exists(file_path):
         try:
             with open(file_path, "rb") as f:
                 data = f.read()
                 encoded = base64.b64encode(data).decode()
                 return f"data:image/jpeg;base64,{encoded}"
-        except Exception: # 修复了这里的语法错误 (加了空格)
+        except Exception:
             return None
     return None
 
-# 读取本地 bliss.jpeg
 local_bliss = get_image_base64("bliss.jpeg")
-
-# 备用链接 (Web Archive 链接，防止 Base64 太长截断代码)
 fallback_url = "https://web.archive.org/web/20230206142820if_/https://upload.wikimedia.org/wikipedia/en/d/d2/Bliss_%28Windows_XP%29.png"
-
-# 最终使用的图片地址 (优先本地，其次网络)
 final_bliss_url = local_bliss if local_bliss else fallback_url
 
 # === 2. 页面配置 ===
@@ -33,7 +27,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 隐藏默认 UI
 st.markdown("""
     <style>
         #MainMenu {visibility: hidden;}
@@ -68,48 +61,36 @@ html_code = f"""
             color: #666; font-weight: bold; font-size: 12px; letter-spacing: 2px; text-shadow: -1px -1px 0 #000;
         }}
 
-        /* === 画布 === */
         #meme-canvas {{
             position: relative; width: 700px; max-width: 90vw; aspect-ratio: 4 / 3;
             background-color: #ffffff; border-radius: 40px / 10px;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.5); overflow: hidden;
             border: 2px solid #000; 
-            /* 像素化滤镜 */
             filter: contrast(110%) brightness(105%);
             image-rendering: pixelated;
         }}
-        /* 噪点层 */
         #meme-canvas::after {{
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36zwjjgzhhYWGMYAEYB8RmROaABADeOQ8CXl/xfgAAAABJRU5ErkJggg==");
             opacity: 0.1; pointer-events: none; z-index: 5; mix-blend-mode: overlay; background-size: 4px 4px;
         }}
 
-        /* === 漂浮文字 (关键修复) === */
+        /* 漂浮文字样式：移除 left/top 的 transition，防止与 JS 动画冲突导致抖动 */
         .floater {{
             position: absolute; 
             white-space: nowrap; 
             cursor: grab; 
             font-weight: 900; 
-            
-            /* 修复裁切: 增加内边距和行高 */
             padding: 25px; 
             line-height: 1.2;
-            
-            /* 修复背景不显示: 强制块级显示 */
             display: inline-block;
-            
-            /* 修复渲染丢失: 强制 GPU 层 */
             will-change: transform, left, top;
             z-index: 10; opacity: 1; 
-            
-            /* 保持像素感 */
             -webkit-font-smoothing: none;
-            
+            /* 只对样式属性做过渡，不对位置做过渡 */
             transition: font-size 0.3s, color 0.3s, text-shadow 0.3s, background 0.3s;
         }}
 
-        /* 控制面板样式 */
         #controls {{
             background-color: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040;
             padding: 15px; width: 700px; max-width: 90vw; display: flex; flex-direction: column; gap: 15px; box-shadow: 5px 5px 0 rgba(0,0,0,0.3);
@@ -137,7 +118,7 @@ html_code = f"""
             <div class="panel-label">Text Generator</div>
             <div class="control-row">
                 <input type="text" id="textInput" placeholder="Type your passion..." value="Design is My Passion !!!">
-                <button class="retro-btn" style="flex:0.5;" onclick="spawnSentence()">ADD TEXT</button>
+                <button class="retro-btn" style="flex:0.6;" onclick="spawnSentence()">ADD TEXT</button>
                 <button class="retro-btn action" style="flex:0.5;" onclick="restyleAll()">🔀 RE-STYLE</button>
                 <button class="retro-btn danger" style="flex:0.3;" onclick="clearCanvas()">🗑️</button>
             </div>
@@ -202,11 +183,10 @@ html_code = f"""
                 this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
                 canvas.appendChild(this.element);
 
-                // === 防重叠逻辑 ===
+                // === 生成时防重叠 (保留) ===
                 const safeMargin = 60; 
                 const maxAttempts = 100;
                 let bestX = 0, bestY = 0;
-                let overlap = true;
 
                 for(let i=0; i<maxAttempts; i++) {{
                     const elW = this.element.offsetWidth || 100;
@@ -229,22 +209,20 @@ html_code = f"""
                             b: f.y + f.element.offsetHeight
                         }};
                         if (!(myRect.r < otherRect.l || myRect.l > otherRect.r || myRect.b < otherRect.t || myRect.t > otherRect.b)) {{
-                            isClean = false;
-                            break; 
+                            isClean = false; break; 
                         }}
                     }}
                     if(isClean) {{
-                        bestX = rx; bestY = ry;
-                        overlap = false;
-                        break;
+                        bestX = rx; bestY = ry; break;
                     }}
                     bestX = rx; bestY = ry;
                 }}
 
                 this.x = bestX;
                 this.y = bestY;
-                this.vx = (Math.random() - 0.5) * 2;
-                this.vy = (Math.random() - 0.5) * 2;
+                // === 慢速移动 (Slow Motion) ===
+                this.vx = (Math.random() - 0.5) * 0.5; // 速度从 2 降到 0.5
+                this.vy = (Math.random() - 0.5) * 0.5;
             }}
 
             applyRandomStyle() {{
@@ -268,32 +246,27 @@ html_code = f"""
                 let transformCSS = "";
 
                 if (styleType === 0) {{
-                    // Style 0: 叠叠乐
                     this.element.style.color = "#fff";
                     this.element.style.webkitTextStroke = "2px black";
                     this.element.style.textShadow = `4px 4px 0 ${{color1}}, 8px 8px 0 ${{color2}}`;
                     this.element.style.fontWeight = "900";
                 }} 
                 else if (styleType === 1) {{
-                     // Style 1: 3D Retro
                     this.element.style.color = color1;
                     this.element.style.textShadow = `2px 2px 0 #000, 4px 4px 0 #000, 6px 6px 0 ${{color2}}`;
                     transformCSS += " skew(-10deg)";
                 }} 
                 else if (styleType === 2) {{
-                    // Style 2: 大描边
                     this.element.style.color = color1;
                     this.element.style.webkitTextStroke = `4px black`; 
                     this.element.style.paintOrder = "stroke fill"; 
                 }} 
                 else if (styleType === 3) {{
-                    // Style 3: 故障风
                     this.element.style.color = "#00ff00"; 
                     this.element.style.textShadow = `-3px 0 red, 3px 0 blue`;
                     this.element.style.fontFamily = '"Courier New", monospace';
                 }} 
                 else if (styleType === 4) {{
-                     // Style 4: 变形
                      this.element.style.color = color1;
                      const scaleX = 0.6 + Math.random() * 1.2; 
                      const scaleY = 0.6 + Math.random() * 0.8; 
@@ -302,7 +275,6 @@ html_code = f"""
                      if (Math.random()>0.5) this.element.style.webkitTextStroke = "1px black";
                 }}
                 else {{
-                    // Style 5: 极限拉伸
                     this.element.style.color = color1;
                     let scaleX, scaleY;
                     if (Math.random() > 0.5) {{
@@ -328,45 +300,20 @@ html_code = f"""
                 const h = this.element.offsetHeight;
                 const maxW = canvas.clientWidth;
                 const maxH = canvas.clientHeight;
-                
-                // 边界检测
-                const safe = 30; 
+                const safeBuffer = 30; 
+
                 this.x += this.vx; 
                 this.y += this.vy;
 
-                if (this.x <= safe) {{ this.vx = Math.abs(this.vx); this.x = safe; }} 
-                else if (this.x + w >= maxW - safe) {{ this.vx = -Math.abs(this.vx); this.x = maxW - w - safe; }}
+                // 墙壁反弹
+                if (this.x <= safeBuffer) {{ this.vx = Math.abs(this.vx); this.x = safeBuffer; }} 
+                else if (this.x + w >= maxW - safeBuffer) {{ this.vx = -Math.abs(this.vx); this.x = maxW - w - safeBuffer; }}
 
-                if (this.y <= safe) {{ this.vy = Math.abs(this.vy); this.y = safe; }} 
-                else if (this.y + h >= maxH - safe) {{ this.vy = -Math.abs(this.vy); this.y = maxH - h - safe; }}
+                if (this.y <= safeBuffer) {{ this.vy = Math.abs(this.vy); this.y = safeBuffer; }} 
+                else if (this.y + h >= maxH - safeBuffer) {{ this.vy = -Math.abs(this.vy); this.y = maxH - h - safeBuffer; }}
 
-                // 简单的物理碰撞检测 (反弹)
-                for (const other of floaters) {{
-                    if (other === this) continue;
-                    
-                    const dx = this.x - other.x;
-                    const dy = this.y - other.y;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    
-                    // 简单判定：如果距离小于两者宽度之和的一半 (近似圆)
-                    const minDist = (w + other.element.offsetWidth) * 0.4; // 0.4 是个宽松系数
-                    
-                    if (dist < minDist) {{
-                        // 交换速度
-                        let tempVx = this.vx;
-                        let tempVy = this.vy;
-                        this.vx = other.vx;
-                        this.vy = other.vy;
-                        other.vx = tempVx;
-                        other.vy = tempVy;
-                        
-                        // 稍微推开防止粘连
-                        const angle = Math.atan2(dy, dx);
-                        const push = 2;
-                        this.x += Math.cos(angle) * push;
-                        this.y += Math.sin(angle) * push;
-                    }}
-                }}
+                // 移除了导致抖动的实时碰撞代码
+                // 现在文字会丝滑地穿过彼此，配合慢速移动，效果更佳
 
                 this.element.style.left = `${{this.x}}px`; 
                 this.element.style.top = `${{this.y}}px`;
