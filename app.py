@@ -45,25 +45,44 @@ html_code = f"""
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        /* === 全局样式 === */
+        /* === 全局重置：防止 padding 撑大宽度导致溢出 === */
+        * {{
+            box-sizing: border-box;
+        }}
+
         body {{
             margin: 0; padding: 20px; background-color: #2d1b4e;
             background-image: radial-gradient(#4a2c7a 1px, transparent 1px);
             background-size: 20px 20px; font-family: 'Courier New', Courier, monospace;
-            display: flex; flex-direction: column; align-items: center; min-height: 95vh; box-sizing: border-box;
+            display: flex; flex-direction: column; align-items: center; min-height: 95vh;
         }}
 
         /* === 电视机外框 === */
         .tv-set {{
-            background-color: #2a2a2a; padding: 20px 20px 40px 20px; border-radius: 30px;
+            background-color: #2a2a2a; 
+            padding: 20px 20px 50px 20px; /* 底部留出更多空间给 Logo */
+            border-radius: 30px;
             box-shadow: inset 0 0 10px #000, 0 0 0 5px #111, 0 20px 50px rgba(0,0,0,0.6);
-            border-bottom: 10px solid #1a1a1a; margin-bottom: 30px; position: relative;
-            width: 100%; max-width: 700px;
-            box-sizing: border-box;
+            border-bottom: 10px solid #1a1a1a; 
+            margin-bottom: 30px; 
+            position: relative;
+            width: 100%; 
+            max-width: 700px;
         }}
+        
+        /* 修复 Logo 定位：使用 width:100% + text-align:center 替代 transform，防止手机端跑偏 */
         .tv-logo {{
-            position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
-            color: #666; font-weight: bold; font-size: 12px; letter-spacing: 2px; text-shadow: -1px -1px 0 #000;
+            position: absolute; 
+            bottom: 15px; 
+            left: 0; 
+            width: 100%;
+            text-align: center;
+            color: #666; 
+            font-weight: bold; 
+            font-size: 12px; 
+            letter-spacing: 2px; 
+            text-shadow: -1px -1px 0 #000;
+            pointer-events: none;
         }}
 
         /* === 画布 === */
@@ -87,68 +106,143 @@ html_code = f"""
             white-space: nowrap; 
             cursor: grab; 
             font-weight: 900; 
-            
-            /* 这里的 padding 和 line-height 也会在 JS 里根据屏幕大小动态调整 */
             padding: 25px; 
             line-height: 1.2;
-            
             display: inline-block;
+            will-change: transform; 
             z-index: 10; 
             opacity: 1; 
-            
-            will-change: transform;
             -webkit-backface-visibility: hidden;
             backface-visibility: hidden;
             -webkit-perspective: 1000;
             perspective: 1000;
-            
             -webkit-font-smoothing: none;
             transition: font-size 0.3s, color 0.3s, text-shadow 0.3s, background 0.3s;
         }}
 
         /* === 控制面板 === */
         #controls {{
-            background-color: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040;
-            padding: 15px; width: 100%; max-width: 700px; display: flex; flex-direction: column; gap: 15px; box-shadow: 5px 5px 0 rgba(0,0,0,0.3);
-            box-sizing: border-box;
+            background-color: #c0c0c0; 
+            border: 2px solid #fff; 
+            border-right-color: #404040; 
+            border-bottom-color: #404040;
+            padding: 15px; 
+            width: 100%; 
+            max-width: 700px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            box-shadow: 5px 5px 0 rgba(0,0,0,0.3);
         }}
-        .control-row {{ display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; align-items: center;}}
         
-        input[type="text"] {{ flex: 2; background: #fff; border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; padding: 8px; font-family: 'Courier New', monospace; font-weight: bold; outline: none; font-size: 18px; }}
+        /* 桌面端布局：Flex */
+        .control-row {{ 
+            display: flex; 
+            gap: 10px; 
+            flex-wrap: wrap; 
+            justify-content: space-between; 
+            align-items: center;
+        }}
         
-        .retro-btn {{ background: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040; padding: 8px 15px; cursor: pointer; font-weight: bold; font-family: 'Courier New', monospace; font-size: 12px; color: black; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; flex:1; white-space: nowrap; height: 36px; box-sizing: border-box; }}
-        .retro-btn:active {{ border: 2px solid #404040; border-right-color: #fff; border-bottom-color: #fff; transform: translate(1px, 1px); }}
+        input[type="text"] {{ 
+            flex: 2; 
+            background: #fff; 
+            border: 2px solid #404040; 
+            border-right-color: #fff; 
+            border-bottom-color: #fff; 
+            padding: 8px; 
+            font-family: 'Courier New', monospace; 
+            font-weight: bold; 
+            outline: none; 
+            font-size: 18px; 
+            width: 100%; /* 确保宽度 */
+        }}
+        
+        .retro-btn {{ 
+            background: #c0c0c0; 
+            border: 2px solid #fff; 
+            border-right-color: #404040; 
+            border-bottom-color: #404040; 
+            padding: 8px 15px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-family: 'Courier New', monospace; 
+            font-size: 12px; 
+            color: black; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            position: relative; 
+            overflow: hidden; 
+            flex: 1; 
+            white-space: nowrap; 
+            height: 36px; 
+        }}
+        .retro-btn:active {{ 
+            border: 2px solid #404040; 
+            border-right-color: #fff; 
+            border-bottom-color: #fff; 
+            transform: translate(1px, 1px); 
+        }}
         .retro-btn.danger {{ color: red; }}
         .retro-btn.action {{ color: blue; }}
-        
         .panel-label {{ font-size: 12px; margin-bottom: 5px; color: #333; text-transform: uppercase; }}
         #file-input {{ position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top:0; left:0;}}
-        .footer-text {{ margin-top: 20px; font-family: 'Courier New', Courier, monospace; color: rgba(255, 255, 255, 0.6); font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; text-align: center; }}
+        
+        .footer-text {{ 
+            margin-top: 20px; 
+            font-family: 'Courier New', Courier, monospace; 
+            color: rgba(255, 255, 255, 0.6); 
+            font-size: 14px; 
+            font-weight: bold; 
+            text-shadow: 2px 2px 0 #000; 
+            letter-spacing: 1px; 
+            text-align: center; 
+            width: 100%;
+        }}
 
-        /* === 手机端布局调整 === */
+        /* === 📱 手机端深度自适应 === */
         @media (max-width: 768px) {{
             body {{ padding: 10px; }}
-            .tv-set {{ padding: 10px; border-radius: 15px; margin-bottom: 15px; }}
+            
+            .tv-set {{ 
+                padding: 15px 15px 45px 15px; /* 调整内边距 */
+                border-radius: 15px; 
+                margin-bottom: 15px; 
+            }}
+            
+            .tv-logo {{
+                font-size: 10px; /* 缩小 Logo 字号 */
+                bottom: 12px;
+            }}
+            
             #meme-canvas {{ border-radius: 20px / 5px; }}
-            #controls {{ padding: 10px; gap: 10px; }}
+            
+            #controls {{ padding: 10px; gap: 12px; }}
+            
+            /* 强制改为 Grid 布局，让按钮对齐更整齐 */
             .control-row {{
                 display: grid !important;
-                grid-template-columns: 1fr 1fr 1fr;
+                grid-template-columns: 1fr 1fr 1fr; /* 3列 */
                 gap: 8px;
             }}
+            
+            /* 输入框强制占满第一行 */
             #textInput {{
-                grid-column: span 3; 
-                width: 100%;
+                grid-column: 1 / -1; /* 跨越所有列 */
                 margin-bottom: 5px;
-                font-size: 16px; 
+                font-size: 16px; /* 防止 iOS 自动放大 */
+                width: 100%;
             }}
+            
+            /* 按钮样式微调 */
             .retro-btn {{
                 flex: none !important;
-                width: auto !important;
+                width: 100% !important; /* 占满格子 */
                 font-size: 11px;
                 padding: 5px 2px;
-                height: 44px;
-                white-space: normal;
+                height: 44px; /* 增大点击区域 */
+                white-space: normal; /* 允许文字换行 */
                 line-height: 1.1;
                 text-align: center;
             }}
@@ -167,9 +261,9 @@ html_code = f"""
             <div class="panel-label">Text Generator</div>
             <div class="control-row">
                 <input type="text" id="textInput" placeholder="Type your passion..." value="Design is My Passion !!!">
-                <button class="retro-btn" style="flex:0.6;" onclick="spawnSentence()">ADD TEXT</button>
-                <button class="retro-btn action" style="flex:0.5;" onclick="restyleAll()">🔀 RE-STYLE</button>
-                <button class="retro-btn danger" style="flex:0.3;" onclick="clearCanvas()">🗑️</button>
+                <button class="retro-btn" onclick="spawnSentence()">ADD TEXT</button>
+                <button class="retro-btn action" onclick="restyleAll()">🔀 RE-STYLE</button>
+                <button class="retro-btn danger" onclick="clearCanvas()">🗑️ CLEAR</button>
             </div>
         </div>
         <div>
@@ -232,10 +326,8 @@ html_code = f"""
                 this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
                 canvas.appendChild(this.element);
 
-                // === 关键修改：动态计算安全边距和网格大小 ===
-                // 根据屏幕宽度决定缩放比例 (Scale Factor)
-                const baseWidth = 700; // 电脑端基准宽度
-                const scale = Math.max(0.4, Math.min(1, canvas.clientWidth / baseWidth)); // 限制在 0.4x 到 1.0x 之间
+                const baseWidth = 700; 
+                const scale = Math.max(0.4, Math.min(1, canvas.clientWidth / baseWidth));
 
                 const safeMargin = 60 * scale; 
                 const availableWidth = canvas.clientWidth - (100 * scale) - safeMargin * 2;
@@ -261,21 +353,12 @@ html_code = f"""
             applyRandomStyle() {{
                 this.element.style.fontFamily = fontFamilies[Math.floor(Math.random() * fontFamilies.length)];
                 
-                // === 关键修改：字号自适应 ===
-                // 获取当前画布宽度，计算缩放系数
                 const baseWidth = 700; 
-                // 手机端缩放系数 (例如手机宽350，系数就是0.5)
                 const scale = Math.max(0.4, Math.min(1, canvas.clientWidth / baseWidth));
-                
-                // 基础字号范围 (电脑端)
                 const baseMin = 30;
                 const baseMax = 120;
-                
-                // 应用缩放
                 const size = Math.floor(Math.random() * (baseMax * scale)) + (baseMin * scale);
                 this.element.style.fontSize = `${{size}}px`;
-                
-                // Padding 也需要缩放，否则手机上padding太大
                 this.element.style.padding = `${{25 * scale}}px`;
 
                 this.element.style.color = "";
@@ -349,7 +432,7 @@ html_code = f"""
                 else if (styleType === 8) {{
                     this.element.style.color = "black";
                     this.element.style.backgroundColor = color1;
-                    this.element.style.padding = `${{10 * scale}}px ${{20 * scale}}px`; // Padding 也要响应式
+                    this.element.style.padding = `${{10 * scale}}px ${{20 * scale}}px`; 
                     transformCSS += ` rotate(${{Math.random()*10-5}}deg)`;
                 }}
                 else {{
@@ -363,7 +446,6 @@ html_code = f"""
                      transformCSS += ` rotate(${{rotate}}deg)`;
                 }}
                 
-                // 强制 3D 变换，防频闪
                 this.element.style.transform = transformCSS + " translateZ(0)";
             }}
             
@@ -383,7 +465,6 @@ html_code = f"""
                 if (this.y <= safeBuffer) {{ this.vy = Math.abs(this.vy); this.y = safeBuffer; }} 
                 else if (this.y + h >= maxH - safeBuffer) {{ this.vy = -Math.abs(this.vy); this.y = maxH - h - safeBuffer; }}
 
-                // 柔性排斥
                 for (const other of floaters) {{
                     if (other === this) continue;
                     const cx1 = this.x + w/2; const cy1 = this.y + h/2;
