@@ -172,48 +172,47 @@ html_code = f"""
         }}
 
         class Floater {{
-            constructor(text) {{
+            // === 修改：构造函数增加 index 和 total 参数 ===
+            constructor(text, index, total) {{
                 this.element = document.createElement('div');
                 this.element.className = 'floater';
                 this.element.innerText = text;
-                this.applyRandomStyle();
                 
+                this.applyRandomStyle();
                 this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
                 canvas.appendChild(this.element);
 
-                // 生成时的尝试逻辑 (保留)
-                const safeMargin = 50; 
-                const maxAttempts = 100;
-                let bestX = safeMargin + Math.random() * (canvas.clientWidth - 200);
-                let bestY = safeMargin + Math.random() * (canvas.clientHeight - 100);
+                // === 核心修改：基于网格的顺序排列 (Grid Layout) ===
+                const safeMargin = 60; 
+                const availableWidth = canvas.clientWidth - 100 - safeMargin * 2; // 减去预估宽度
+                const availableHeight = canvas.clientHeight - 100 - safeMargin * 2;
 
-                for(let i=0; i<maxAttempts; i++) {{
-                    const elW = this.element.offsetWidth || 150;
-                    const elH = this.element.offsetHeight || 80;
-                    const rx = safeMargin + Math.random() * (canvas.clientWidth - elW - safeMargin);
-                    const ry = safeMargin + Math.random() * (canvas.clientHeight - elH - safeMargin);
-                    
-                    // 简单检查碰撞
-                    let isClean = true;
-                    for(const f of floaters) {{
-                        if(!f.element) continue;
-                        const dx = Math.abs((rx + elW/2) - (f.x + f.element.offsetWidth/2));
-                        const dy = Math.abs((ry + elH/2) - (f.y + f.element.offsetHeight/2));
-                        const minDistX = (elW + f.element.offsetWidth)/2;
-                        const minDistY = (elH + f.element.offsetHeight)/2;
-                        
-                        if(dx < minDistX && dy < minDistY) {{
-                            isClean = false; break;
-                        }}
-                    }}
-                    if(isClean) {{
-                        bestX = rx; bestY = ry; break;
-                    }}
-                }}
+                // 计算最佳行列数 (趋向于方形网格)
+                const cols = Math.ceil(Math.sqrt(total));
+                const rows = Math.ceil(total / cols);
 
-                this.x = bestX;
-                this.y = bestY;
-                this.vx = (Math.random() - 0.5) * 0.5; // 慢速
+                // 计算当前单词在网格中的坐标
+                const col = index % cols;
+                const row = Math.floor(index / cols);
+
+                // 计算每个网格单元的大小
+                const cellWidth = availableWidth / cols;
+                const cellHeight = availableHeight / rows;
+
+                // 确定基准位置 (每个格子的左上角 + Margin)
+                let baseX = safeMargin + col * cellWidth;
+                let baseY = safeMargin + row * cellHeight;
+
+                // 在各自的格子内添加随机扰动 (Jitter)
+                // 这样既保证了顺序，又不会太死板
+                const jitterX = Math.random() * (cellWidth * 0.6);
+                const jitterY = Math.random() * (cellHeight * 0.6);
+
+                this.x = baseX + jitterX;
+                this.y = baseY + jitterY;
+
+                // 慢速移动
+                this.vx = (Math.random() - 0.5) * 0.5; 
                 this.vy = (Math.random() - 0.5) * 0.5;
             }}
 
@@ -294,54 +293,33 @@ html_code = f"""
                 const maxH = canvas.clientHeight;
                 const safeBuffer = 30; 
 
-                // 移动
                 this.x += this.vx; 
                 this.y += this.vy;
 
-                // 墙壁反弹
                 if (this.x <= safeBuffer) {{ this.vx = Math.abs(this.vx); this.x = safeBuffer; }} 
                 else if (this.x + w >= maxW - safeBuffer) {{ this.vx = -Math.abs(this.vx); this.x = maxW - w - safeBuffer; }}
 
                 if (this.y <= safeBuffer) {{ this.vy = Math.abs(this.vy); this.y = safeBuffer; }} 
                 else if (this.y + h >= maxH - safeBuffer) {{ this.vy = -Math.abs(this.vy); this.y = maxH - h - safeBuffer; }}
 
-                // === 柔性排斥场 (Soft Repulsion Field) ===
-                // 这个逻辑不会导致抖动，而是产生丝滑的推离效果
+                // 柔性排斥 (保留，以防随机扰动导致重叠)
                 for (const other of floaters) {{
                     if (other === this) continue;
-                    
-                    // 获取中心点
-                    const cx1 = this.x + w/2;
-                    const cy1 = this.y + h/2;
-                    const cx2 = other.x + other.element.offsetWidth/2;
-                    const cy2 = other.y + other.element.offsetHeight/2;
-                    
-                    const dx = cx1 - cx2;
-                    const dy = cy1 - cy2;
-                    
-                    // 判断是否重叠 (使用简单的 AABB 矩形判断)
+                    const cx1 = this.x + w/2; const cy1 = this.y + h/2;
+                    const cx2 = other.x + other.element.offsetWidth/2; const cy2 = other.y + other.element.offsetHeight/2;
+                    const dx = cx1 - cx2; const dy = cy1 - cy2;
                     const minDistX = (w + other.element.offsetWidth) / 2;
                     const minDistY = (h + other.element.offsetHeight) / 2;
                     
-                    // 如果两个矩形重叠了
                     if (Math.abs(dx) < minDistX && Math.abs(dy) < minDistY) {{
-                        // 计算重叠深度
                         const overlapX = minDistX - Math.abs(dx);
                         const overlapY = minDistY - Math.abs(dy);
-                        
-                        // 找出最容易分离的方向
                         if (overlapX < overlapY) {{
-                            // 横向推开 (力道很小，分摊到多帧)
-                            const force = overlapX * 0.05; // 5% 的修正力
-                            const dir = dx > 0 ? 1 : -1;
-                            this.x += dir * force;
-                            this.vx += dir * 0.05; // 稍微改变一点速度方向
+                            const force = overlapX * 0.05; const dir = dx > 0 ? 1 : -1;
+                            this.x += dir * force; this.vx += dir * 0.05;
                         }} else {{
-                            // 纵向推开
-                            const force = overlapY * 0.05;
-                            const dir = dy > 0 ? 1 : -1;
-                            this.y += dir * force;
-                            this.vy += dir * 0.05;
+                            const force = overlapY * 0.05; const dir = dy > 0 ? 1 : -1;
+                            this.y += dir * force; this.vy += dir * 0.05;
                         }}
                     }}
                 }}
@@ -354,7 +332,9 @@ html_code = f"""
         function spawnSentence() {{
             const text = textInput.value;
             const words = segmentText(text);
-            words.forEach(w => floaters.push(new Floater(w)));
+            const total = words.length;
+            // 修改：传入 index 和 total
+            words.forEach((w, i) => floaters.push(new Floater(w, i, total)));
             textInput.value = '';
         }}
 
