@@ -230,8 +230,11 @@ html_code = """
             this.element.innerText = text;
 
             const safeMargin = 100;
-            this.x = safeMargin + Math.random() * (canvas.clientWidth - 2 * safeMargin);
-            this.y = safeMargin + Math.random() * (canvas.clientHeight - 2 * safeMargin);
+            const maxW = canvas.clientWidth || 700;
+            const maxH = canvas.clientHeight || 500;
+
+            this.x = safeMargin + Math.random() * Math.max(10, (maxW - 2 * safeMargin));
+            this.y = safeMargin + Math.random() * Math.max(10, (maxH - 2 * safeMargin));
 
             this.vx = (Math.random() - 0.5) * BASE_SPEED;
             this.vy = (Math.random() - 0.5) * BASE_SPEED;
@@ -239,6 +242,61 @@ html_code = """
             this.applyRandomStyle();
             this.element.addEventListener('click', (e) => { e.stopPropagation(); this.element.remove(); });
             canvas.appendChild(this.element);
+
+            this.resolveOverlap();  // 生成时做一次排布，尽量不和已有文字重叠
+        }
+
+        resolveOverlap() {
+            const maxW = canvas.clientWidth || 700;
+            const maxH = canvas.clientHeight || 500;
+            const safeMargin = 40;
+            const maxAttempts = 40;
+
+            if (!maxW || !maxH) return;
+
+            let attempts = 0;
+
+            const getRect = () => {
+                const w = this.element.offsetWidth || 0;
+                const h = this.element.offsetHeight || 0;
+                return { w, h };
+            };
+
+            while (attempts < maxAttempts) {
+                const { w, h } = getRect();
+                let overlap = false;
+
+                for (const other of floaters) {
+                    // 忽略已从 DOM 移除的
+                    if (!other || !other.element || !other.element.isConnected) continue;
+
+                    const ow = other.element.offsetWidth || 0;
+                    const oh = other.element.offsetHeight || 0;
+
+                    if (ow === 0 || oh === 0 || w === 0 || h === 0) continue;
+
+                    const noOverlap =
+                        this.x + w < other.x ||
+                        this.x > other.x + ow ||
+                        this.y + h < other.y ||
+                        this.y > other.y + oh;
+
+                    if (!noOverlap) {
+                        overlap = true;
+                        break;
+                    }
+                }
+
+                if (!overlap) break;
+
+                // 重抽一个位置继续试
+                this.x = safeMargin + Math.random() * Math.max(10, (maxW - 2 * safeMargin));
+                this.y = safeMargin + Math.random() * Math.max(10, (maxH - 2 * safeMargin));
+                attempts++;
+            }
+
+            this.element.style.left = `${this.x}px`;
+            this.element.style.top = `${this.y}px`;
         }
 
         applyRandomStyle() {
@@ -353,8 +411,8 @@ html_code = """
         update() {
             const w = this.element.offsetWidth;
             const h = this.element.offsetHeight;
-            const maxW = canvas.clientWidth;
-            const maxH = canvas.clientHeight;
+            const maxW = canvas.clientWidth || 700;
+            const maxH = canvas.clientHeight || 500;
             const safeBuffer = 50; 
 
             this.x += this.vx; this.y += this.vy;
