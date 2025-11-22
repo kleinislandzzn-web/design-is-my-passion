@@ -107,7 +107,7 @@ html_code = """
 
         .footer-text { margin-top: 20px; font-family: 'Courier New', Courier, monospace; color: rgba(255, 255, 255, 0.6); font-size: 14px; font-weight: bold; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; text-align: center; }
 
-        /* === 移动端适配 === */
+        /* === 移动端适配 & 降噪 === */
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -122,6 +122,14 @@ html_code = """
                 width: 100%;
                 max-width: 100%;
                 border-radius: 24px / 8px;
+                filter: none; /* 移动端关闭对比/亮度滤镜，减少闪烁 */
+            }
+
+            /* 关掉 CRT 噪点遮罩 */
+            #meme-canvas::after {
+                opacity: 0;
+                background-image: none;
+                content: "";
             }
 
             #controls {
@@ -194,7 +202,7 @@ html_code = """
     const canvas = document.getElementById('meme-canvas');
     const textInput = document.getElementById('textInput');
     const blissData = "__BLISS__";
-    const BASE_SPEED = 0.8;
+    const BASE_SPEED = 0.8;                             // 速度稍快一点
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
     let floaters = [];
 
@@ -211,8 +219,8 @@ html_code = """
         "linear-gradient(to bottom, #00F260, #0575E6)" 
     ];
 
-    function randomColor() { 
-        return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`; 
+    function randomColor() {
+        return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`;
     }
 
     class Floater {
@@ -238,7 +246,9 @@ html_code = """
             const size = Math.floor(Math.random() * 120) + 30;
             this.element.style.fontSize = `${size}px`;
 
+            // === Mobile: 简化版，保留彩色但去掉阴影和变形，减少闪烁 ===
             if (isMobile) {
+                const color = randomColor();
                 this.element.style.cssText = `
                     font-family: ${this.element.style.fontFamily};
                     font-size: ${size}px;
@@ -252,16 +262,18 @@ html_code = """
                     line-height: 1.4;
                     left: ${this.x}px;
                     top: ${this.y}px;
-                    color: #ffffff;
-                    text-shadow: 2px 2px 0 #000000;
+                    color: ${color};
                     -webkit-font-smoothing: antialiased;
                     text-rendering: optimizeLegibility;
                     will-change: left, top;
                 `;
                 this.element.style.transform = 'none';
+                this.element.style.textShadow = 'none';
+                this.element.style.webkitTextStroke = '0';
                 return;
             }
 
+            // === Desktop: 保留原来的花里胡哨特效 ===
             this.element.style.cssText = `
                 font-family: ${this.element.style.fontFamily};
                 font-size: ${size}px;
