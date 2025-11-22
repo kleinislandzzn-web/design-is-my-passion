@@ -60,24 +60,39 @@ html_code = f"""
             color: #666; font-weight: bold; font-size: 12px; letter-spacing: 2px; text-shadow: -1px -1px 0 #000;
         }}
 
-        /* === 画布 === */
+        /* === 画布 (增加了滤镜以模拟毛刺感) === */
         #meme-canvas {{
             position: relative; width: 700px; max-width: 90vw; aspect-ratio: 4 / 3;
             background-color: #ffffff; border-radius: 40px / 10px;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.5); overflow: hidden;
             border: 2px solid #000; 
+            
+            /* 核心修改：增加对比度，让模糊的边缘变硬，产生锐利/毛刺感 */
+            filter: contrast(125%) brightness(105%);
+            
+            /* 强制像素化渲染 */
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
         }}
-        /* 噪点层 */
+        
+        /* 噪点层 (加重了一点点不透明度) */
         #meme-canvas::after {{
             content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAUVBMVEWFhYWDg4N3d3dtbW17e3t1dXV0dHR4eHh2dnZ6enp8fHx5eXl9fX1xcXF/f39wcHBzc3Nvb29TU1NEREQtLS0lJSUgICAfHx8QEBAAAAAA/wAkAAAAPnRSTlMAAQIDBAUGBwgJCgsMDQ4PEBITFBUWFxgZGhscHR4fICEiIyQmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0Zom6gAAAEZSURBVEjHhZKHctwwDANFaaTYRZvb/v9fN0hA4g1cOa3tK9c4FkWRokRKCgE/hJ1I8d/Zt2r58wWza3eF4H92v2m+gU+R8X+w5874D2z9F0j8C53jX+h3/IWH+Bdu+S9c418YFv+FufkXlvErbPErXN9+hU9/hX3/Fa7XW2Q1r9HXeI2u1it0/b5Ctl9B1+9/IXsE7P25QnZfIftv0M1+hWz+C9k/obcI2T2Bt98gO39B71+QnZeo9r9A7xW62+9R+xX2vEDvF+jdY7XfINsH9H4F7X+D7L4h92s0998gO19R+/+g2z/o9gH9+4LevoD+O+j/B/R+h/2+Qp7vUPN3qNl+Q+3W8x37B6jdfL9jV1G+X1H8A4x9d6nQ8oafAAAAAElFTkSuQmCC");
-            opacity: 0.2; pointer-events: none; z-index: 5; mix-blend-mode: overlay;
+            opacity: 0.25; pointer-events: none; z-index: 5; mix-blend-mode: overlay;
         }}
 
-        /* === 漂浮文字 === */
+        /* === 漂浮文字 (去抗锯齿) === */
         .floater {{
             position: absolute; white-space: nowrap; cursor: grab; font-weight: 900; line-height: 1;
-            z-index: 10; opacity: 1; transition: font-size 0.3s, color 0.3s, text-shadow 0.3s; /* 增加一点变化的过渡动画 */
+            z-index: 10; opacity: 1; 
+            
+            /* 核心修改：关闭字体平滑，制造锯齿感 */
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: geometricPrecision;
+            
+            transition: font-size 0.3s, color 0.3s, text-shadow 0.3s;
         }}
 
         /* === 控制面板 === */
@@ -170,28 +185,25 @@ html_code = f"""
                 this.element.className = 'floater';
                 this.element.innerText = text;
                 
-                // 初始化时应用随机样式
                 this.applyRandomStyle();
 
                 this.element.addEventListener('click', (e) => {{ e.stopPropagation(); this.element.remove(); }});
                 canvas.appendChild(this.element);
 
-                this.x = Math.random() * (canvas.clientWidth - 100);
-                this.y = Math.random() * (canvas.clientHeight - 100);
+                // 初始化位置：强制在中心区域，防止出生即撞墙
+                const safeMargin = 100;
+                this.x = safeMargin + Math.random() * (canvas.clientWidth - 2 * safeMargin);
+                this.y = safeMargin + Math.random() * (canvas.clientHeight - 2 * safeMargin);
+                
                 this.vx = (Math.random() - 0.5) * 2;
                 this.vy = (Math.random() - 0.5) * 2;
             }}
 
-            // === 核心：随机样式生成逻辑 ===
             applyRandomStyle() {{
-                // 1. 随机字体
                 this.element.style.fontFamily = fontFamilies[Math.floor(Math.random() * fontFamilies.length)];
-                
-                // 2. 随机大小 (大差距：30px - 150px)
                 const size = Math.floor(Math.random() * 120) + 30;
                 this.element.style.fontSize = `${{size}}px`;
 
-                // 3. 清除之前的样式残留
                 this.element.style.color = "";
                 this.element.style.webkitTextStroke = "";
                 this.element.style.textShadow = "";
@@ -199,9 +211,8 @@ html_code = f"""
                 this.element.style.backgroundColor = "transparent";
                 this.element.style.fontStyle = "normal";
                 this.element.style.padding = "0";
-                this.element.style.transform = ""; // 清除变换，后面重新加
+                this.element.style.transform = ""; 
 
-                // 4. 随机风格选择 (增加到 6 种)
                 const styleType = Math.floor(Math.random() * 6); 
                 const color1 = randomColor();
                 const color2 = randomColor();
@@ -209,52 +220,43 @@ html_code = f"""
                 let transformCSS = "";
 
                 if (styleType === 0) {{
-                    // [Style: The Stack/叠叠乐]
                     this.element.style.color = "#fff";
                     this.element.style.webkitTextStroke = "2px black";
                     this.element.style.textShadow = `4px 4px 0 ${{color1}}, 8px 8px 0 ${{color2}}`;
                     this.element.style.fontWeight = "900";
                 }} 
                 else if (styleType === 1) {{
-                     // [Style: Rainbow Liquid/渐变流体]
                     const angle = Math.floor(Math.random() * 360);
                     this.element.style.backgroundImage = `linear-gradient(${{angle}}deg, ${{color1}}, ${{color2}}, ${{randomColor()}})`;
                     this.element.style.webkitBackgroundClip = 'text';
                     this.element.style.webkitTextFillColor = 'transparent';
-                    transformCSS += ` skew(${{Math.random()*30-15}}deg)`; // 必带倾斜
+                    transformCSS += ` skew(${{Math.random()*30-15}}deg)`; 
                 }} 
                 else if (styleType === 2) {{
-                    // [Style: Heavy Stroke/大描边]
                     this.element.style.color = color1;
                     this.element.style.webkitTextStroke = `4px black`; 
                     this.element.style.paintOrder = "stroke fill"; 
                 }} 
                 else if (styleType === 3) {{
-                    // [Style: Glitch/故障风]
                     this.element.style.color = "#00ff00"; 
                     this.element.style.textShadow = `-3px 0 red, 3px 0 blue`;
                     this.element.style.fontFamily = '"Courier New", monospace';
                 }} 
                 else if (styleType === 4) {{
-                     // [New Style: Elastic Distortion/轻度变形] (用户需求)
                      this.element.style.color = color1;
-                     // 随机不成比例拉伸
-                     const scaleX = 0.6 + Math.random() * 1.2; // 0.6 - 1.8
-                     const scaleY = 0.6 + Math.random() * 0.8; // 0.6 - 1.4
-                     const skew = Math.random() * 40 - 20;     // -20deg - 20deg
+                     const scaleX = 0.6 + Math.random() * 1.2; 
+                     const scaleY = 0.6 + Math.random() * 0.8; 
+                     const skew = Math.random() * 40 - 20;     
                      transformCSS += ` scale(${{scaleX}}, ${{scaleY}}) skew(${{skew}}deg)`;
-                     // 偶尔加个边框
                      if (Math.random()>0.5) this.element.style.webkitTextStroke = "1px black";
                 }}
                 else {{
-                    // [Style: Chaos/色块背景]
                     this.element.style.color = "white";
                     this.element.style.backgroundColor = color1;
                     this.element.style.padding = "2px 10px";
                     transformCSS += ` rotate(${{Math.random()*40-20}}deg)`;
                 }}
 
-                // 通用随机旋转 (如果风格里没强制定义旋转)
                 if (!transformCSS.includes("rotate")) {{
                      const rotate = Math.floor(Math.random() * 60) - 30;
                      transformCSS += ` rotate(${{rotate}}deg)`;
@@ -263,19 +265,38 @@ html_code = f"""
                 this.element.style.transform = transformCSS;
             }}
             
+            // === 修正后的物理引擎 (解决裁切/消失问题) ===
             update() {{
                 const w = this.element.offsetWidth;
                 const h = this.element.offsetHeight;
                 const maxW = canvas.clientWidth;
                 const maxH = canvas.clientHeight;
 
+                // 安全边距：设置大一点 (50px)，因为旋转后的文字实际宽度比 offsetWidth 大
+                // 这样能保证文字在碰到物理边缘之前就反弹，不会被裁切
+                const safeBuffer = 50; 
+
                 this.x += this.vx; this.y += this.vy;
 
-                if (this.x <= 0) {{ this.vx = Math.abs(this.vx); this.x = 0; }} 
-                else if (this.x + w >= maxW) {{ this.vx = -Math.abs(this.vx); this.x = maxW - w; }}
+                // X轴反弹
+                if (this.x <= safeBuffer) {{ 
+                    this.vx = Math.abs(this.vx); // 向右
+                    this.x = safeBuffer; 
+                }} 
+                else if (this.x + w >= maxW - safeBuffer) {{ 
+                    this.vx = -Math.abs(this.vx); // 向左
+                    this.x = maxW - w - safeBuffer; 
+                }}
 
-                if (this.y <= 0) {{ this.vy = Math.abs(this.vy); this.y = 0; }} 
-                else if (this.y + h >= maxH) {{ this.vy = -Math.abs(this.vy); this.y = maxH - h; }}
+                // Y轴反弹
+                if (this.y <= safeBuffer) {{ 
+                    this.vy = Math.abs(this.vy); // 向下
+                    this.y = safeBuffer; 
+                }} 
+                else if (this.y + h >= maxH - safeBuffer) {{ 
+                    this.vy = -Math.abs(this.vy); // 向上
+                    this.y = maxH - h - safeBuffer; 
+                }}
 
                 this.element.style.left = `${{this.x}}px`; 
                 this.element.style.top = `${{this.y}}px`;
@@ -289,7 +310,6 @@ html_code = f"""
             textInput.value = '';
         }}
 
-        // === 新增功能：重新随机化所有样式 ===
         function restyleAll() {{
             floaters.forEach(f => f.applyRandomStyle());
         }}
@@ -330,6 +350,8 @@ html_code = f"""
             const originalShadow = canvas.style.boxShadow;
             const originalBorder = canvas.style.border;
             canvas.style.borderRadius = '0'; canvas.style.boxShadow = 'none'; canvas.style.border = 'none';
+            // 导出时移除滤镜，或者保留(如果html2canvas支持)
+            // 这里保持 scale: 2 以获得高清图
             html2canvas(canvas, {{ scale: 2 }}).then(blob => {{
                 const link = document.createElement('a'); link.download = 'passion-meme.png'; link.href = blob.toDataURL('image/png'); link.click();
                 canvas.style.borderRadius = originalRadius; canvas.style.boxShadow = originalShadow; canvas.style.border = originalBorder;
